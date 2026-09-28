@@ -13,7 +13,7 @@ export interface Macros {
   colour: number
   /** Close and dry → vast and distant. */
   space: number
-  /** Beatless drone → a defined lo-fi beat. */
+  /** Beatless drone → a moving, defined pulse. Tempo, swing, and the kit if one is loaded. */
   pulse: number
   /** Sparse and single-voiced → lush and layered. */
   density: number
@@ -36,7 +36,7 @@ export const MACRO_INFO: readonly MacroInfo[] = [
   { key: 'warmth', label: 'Warmth', low: 'clean', high: 'dust' },
   { key: 'colour', label: 'Colour', low: 'dark', high: 'lumen' },
   { key: 'space', label: 'Space', low: 'close', high: 'vast' },
-  { key: 'pulse', label: 'Pulse', low: 'still', high: 'beat' },
+  { key: 'pulse', label: 'Pulse', low: 'still', high: 'moving' },
   { key: 'density', label: 'Density', low: 'sparse', high: 'lush' },
   { key: 'drift', label: 'Drift', low: 'held', high: 'restless' },
 ]

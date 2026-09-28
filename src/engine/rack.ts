@@ -11,6 +11,9 @@ import { createRng, deriveSeed, rngAt, centred } from '../core/rng.ts'
 import type { Stereo } from '../voices/types.ts'
 import type { DrumHit } from '../voices/drums.ts'
 import { clamp01 } from '../core/curves.ts'
+import { paramSpecOf } from '../instruments/paramSpecOf.ts'
+import { normaliseParam } from '../fuzzy/normaliseParam.ts'
+import { denormaliseParam } from '../fuzzy/denormaliseParam.ts'
 
 /**
  * A serialisable description of one slot. The interface owns this; the rack
@@ -31,6 +34,12 @@ export interface SlotDesc {
   readonly expression: Expression
   readonly follow: number
   readonly lanes: Lane[]
+  /**
+   * Direct settings, normalised 0..1 across each parameter's range. A
+   * parameter with no entry is left to the rules; one with an entry overrides
+   * them, and lanes then automate relative to it.
+   */
+  readonly knobs: Readonly<Record<string, number>>
 }
 
 export interface SlotState {
@@ -45,15 +54,28 @@ export interface SlotState {
   /** 0 = entirely its own expression, 1 = entirely the global one. */
   follow: number
   lanes: Lane[]
+  knobs: Readonly<Record<string, number>>
+}
+
+/** What a slot is doing right now, for the interface to show. */
+export interface SlotReadout {
+  readonly id: string
+  readonly expression: Expression
+  readonly level: number
+  /** Every parameter, normalised 0..1 — what an untouched knob would read. */
+  readonly params: Readonly<Record<string, number>>
 }
 
 interface Slot extends SlotState {
   readonly def: InstrumentDef
-  readonly voice: InstrumentVoice
   readonly fuzzy: FuzzyEngine
+  voice: InstrumentVoice
   /** Expression after automation, what the rules actually saw. */
   resolved: Expression
   params: Record<string, number>
+  /** The same, evaluated at the current bar's downbeat. Patterns read these. */
+  barResolved: Expression
+  barParams: Record<string, number>
 }
 
 export interface ScheduledEvent {
@@ -122,10 +144,13 @@ export class Rack {
       expression: { ...NEUTRAL },
       follow: 1,
       lanes: [],
+      knobs: {},
       voice: def.create(this.sampleRate, createRng(deriveSeed(this.seed, defId, this.counter))),
       fuzzy: new FuzzyEngine(def.rules),
       resolved: { ...NEUTRAL },
       params: {},
+      barResolved: { ...NEUTRAL },
+      barParams: {},
     }
     if (at === undefined) this.slots.push(slot)
     else this.slots.splice(at, 0, slot)
@@ -143,7 +168,7 @@ export class Rack {
     this.slots.splice(Math.max(0, Math.min(this.slots.length, to)), 0, slot)
   }
 
-  update(id: string, patch: Partial<Pick<SlotState, 'level' | 'muted' | 'soloed' | 'expression' | 'follow' | 'name' | 'lanes'>>): void {
+  update(id: string, patch: Partial<Pick<SlotState, 'level' | 'muted' | 'soloed' | 'expression' | 'follow' | 'name' | 'lanes' | 'knobs'>>): void {
     const slot = this.slots.find((s) => s.id === id)
     if (!slot) return
     Object.assign(slot, patch)
@@ -180,10 +205,13 @@ export class Rack {
           expression: { ...d.expression },
           follow: d.follow,
           lanes: d.lanes,
+          knobs: d.knobs,
           voice: def.create(this.sampleRate, createRng(deriveSeed(this.seed, d.id))),
           fuzzy: new FuzzyEngine(def.rules),
           resolved: { ...d.expression },
           params: {},
+          barResolved: { ...d.expression },
+          barParams: {},
         }
       } else {
         slot.name = d.name
@@ -193,6 +221,7 @@ export class Rack {
         slot.expression = { ...d.expression }
         slot.follow = d.follow
         slot.lanes = d.lanes
+        slot.knobs = d.knobs
       }
       next.push(slot)
     }
@@ -204,7 +233,20 @@ export class Rack {
     return this.slots.map((s) => ({
       id: s.id, defId: s.defId, name: s.name, level: s.level, muted: s.muted,
       soloed: s.soloed, expression: { ...s.expression }, follow: s.follow, lanes: s.lanes,
+      knobs: { ...s.knobs },
     }))
+  }
+
+  /** Each slot's live state, normalised, for knobs to show as a ghost. */
+  readout(): SlotReadout[] {
+    return this.slots.map((s) => {
+      const params: Record<string, number> = {}
+      for (const [name, value] of Object.entries(s.params)) {
+        const spec = paramSpecOf(s.def, name)
+        if (spec) params[name] = Math.round(normaliseParam(spec, value) * 1000) / 1000
+      }
+      return { id: s.id, expression: { ...s.resolved }, level: s.level, params }
+    })
   }
 
   /**
@@ -212,49 +254,96 @@ export class Rack {
    * expression, infer parameters, and push them into the voice.
    */
   control(global: Expression, ctx: LaneContext): void {
+    const anySolo = this.slots.some((s) => s.soloed)
     for (const slot of this.slots) {
-      // The instrument's own expression, pulled towards the global one by
-      // however much it is set to follow. This is how six master dials steer a
-      // rack of instruments that each also have their own character.
-      const base: Expression = { ...NEUTRAL }
-      for (const k of EXPRESSION_KEYS) {
-        base[k] = slot.expression[k] + (global[k] - slot.expression[k]) * slot.follow
-      }
-      // Automation lands on top, so a drawn curve overrides both.
-      for (const lane of slot.lanes) {
-        if (!lane.enabled || lane.target.kind !== 'expression') continue
-        const v = this.lanes.value(lane, ctx)
-        const key = lane.target.key
-        base[key] = this.lanes.apply(base[key], v, lane)
-      }
-      slot.resolved = clampExpression(base)
-      slot.params = { ...slot.fuzzy.evaluate(slot.resolved) }
-
-      // Parameter-targeted lanes bypass the rules entirely, for when someone
-      // wants to move one thing and not the twelve it is normally tied to.
-      for (const lane of slot.lanes) {
-        if (!lane.enabled || lane.target.kind !== 'param') continue
-        const spec = slot.def.rules.outputs[lane.target.param]
-        if (!spec) continue
-        const v = this.lanes.value(lane, ctx)
-        const norm = spec.scale === 'exp'
-          ? Math.log(slot.params[lane.target.param] / spec.min) / Math.log(spec.max / spec.min)
-          : (slot.params[lane.target.param] - spec.min) / (spec.max - spec.min)
-        const next = clamp01(this.lanes.apply(norm, v, lane))
-        slot.params[lane.target.param] = spec.scale === 'exp'
-          ? spec.min * Math.pow(spec.max / spec.min, next)
-          : spec.min + (spec.max - spec.min) * next
-      }
-
-      let level = slot.level
-      for (const lane of slot.lanes) {
-        if (!lane.enabled || lane.target.kind !== 'level') continue
-        level = clamp01(this.lanes.apply(level, this.lanes.value(lane, ctx), lane))
-      }
-      const anySolo = this.slots.some((s) => s.soloed)
+      const { resolved, params, level } = this.evaluate(slot, global, ctx)
+      slot.resolved = resolved
+      slot.params = params
       const audible = slot.muted || (anySolo && !slot.soloed) ? 0 : level
       slot.def.apply(slot.voice, slot.params, audible)
     }
+  }
+
+  /**
+   * Evaluate every slot at a downbeat, for the bar's patterns to read.
+   *
+   * Patterns used to read whatever the last control tick of the previous bar
+   * left behind, which made bar N's notes depend on how playback arrived at
+   * bar N. Evaluating afresh at the downbeat makes them a function of the bar
+   * alone. Follow lanes read silence here: they shape how a bar sounds, never
+   * what it plays, because the signal they follow does not exist for a bar
+   * that was seeked to.
+   */
+  prepareBar(global: Expression, bar: number): void {
+    const ctx: LaneContext = { bars: bar, kick: 0, level: 0 }
+    for (const slot of this.slots) {
+      const { resolved, params } = this.evaluate(slot, global, ctx)
+      slot.barResolved = resolved
+      slot.barParams = params
+    }
+  }
+
+  /**
+   * Rebuild every voice from its seed, for a seek. What was sounding belongs
+   * to wherever playback was, not to where it is going.
+   */
+  resetVoices(): void {
+    for (const slot of this.slots) {
+      slot.voice = slot.def.create(this.sampleRate, createRng(deriveSeed(this.seed, slot.id)))
+    }
+  }
+
+  /** Pure: a slot's expression, parameters and level at one instant. */
+  private evaluate(
+    slot: Slot,
+    global: Expression,
+    ctx: LaneContext,
+  ): { resolved: Expression; params: Record<string, number>; level: number } {
+    // The instrument's own expression, pulled towards the global one by
+    // however much it is set to follow. This is how six master dials steer a
+    // rack of instruments that each also have their own character.
+    const base: Expression = { ...NEUTRAL }
+    for (const k of EXPRESSION_KEYS) {
+      base[k] = slot.expression[k] + (global[k] - slot.expression[k]) * slot.follow
+    }
+    // Automation lands on top, so a drawn curve overrides both.
+    for (const lane of slot.lanes) {
+      if (!lane.enabled || lane.target.kind !== 'expression') continue
+      const v = this.lanes.value(lane, ctx)
+      const key = lane.target.key
+      base[key] = this.lanes.apply(base[key], v, lane)
+    }
+    const resolved = clampExpression(base)
+    const params = { ...slot.fuzzy.evaluate(resolved) }
+    const fixed = slot.def.fixed
+    if (fixed) {
+      for (const name in fixed) params[name] = denormaliseParam(fixed[name], fixed[name].default)
+    }
+
+    // Knobs override what the rules inferred, for when someone wants to set
+    // one thing and not the twelve it is normally tied to.
+    for (const name in slot.knobs) {
+      const spec = paramSpecOf(slot.def, name)
+      if (spec) params[name] = denormaliseParam(spec, slot.knobs[name])
+    }
+
+    // Parameter lanes move a parameter relative to wherever the rules or the
+    // knob left it.
+    for (const lane of slot.lanes) {
+      if (!lane.enabled || lane.target.kind !== 'param') continue
+      const name = lane.target.param
+      const spec = paramSpecOf(slot.def, name)
+      if (!spec || params[name] === undefined) continue
+      const v = this.lanes.value(lane, ctx)
+      params[name] = denormaliseParam(spec, this.lanes.apply(normaliseParam(spec, params[name]), v, lane))
+    }
+
+    let level = slot.level
+    for (const lane of slot.lanes) {
+      if (!lane.enabled || lane.target.kind !== 'level') continue
+      level = clamp01(this.lanes.apply(level, this.lanes.value(lane, ctx), lane))
+    }
+    return { resolved, params, level }
   }
 
   /**
@@ -284,11 +373,13 @@ export class Rack {
         Math.max(0, (step + (step % 2 === 1 ? swing * 0.5 : 0)) * stepSamples + jitter(scale))
 
       const patternCtx = {
-        bar, expression: slot.resolved, params: slot.params, rng, tempo,
+        bar, expression: slot.barResolved, params: slot.barParams, rng, tempo,
+        phraseRng: (...parts: (string | number)[]) => rngAt(this.seed, slot.id, 'phrase', ...parts),
       }
 
       if (slot.def.notes) {
-        const register = Resolver.registerFor(slot.def.role, harmonic.rootMidi)
+        const base = Resolver.registerFor(slot.def.role, harmonic.rootMidi)
+        const register = slot.def.register ? slot.def.register(slot.barParams, base) : base
         for (const intent of slot.def.notes(patternCtx)) {
           const midi = this.resolver.resolve(intent, harmonic, register, slot.id)
           if (midi === null) continue
@@ -345,9 +436,5 @@ export class Rack {
       target[0] += acc[0]
       target[1] += acc[1]
     }
-  }
-
-  resetAutomation(): void {
-    this.lanes.reset()
   }
 }

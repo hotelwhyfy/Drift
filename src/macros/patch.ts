@@ -3,6 +3,7 @@ import { clamp01, clamp, lerp, lerpExp, bias, ramp, hump, dbToGain } from '../co
 import { MODES, modeAt } from '../core/theory.ts'
 import type { Expression } from '../fuzzy/expression.ts'
 import type { Mode } from '../core/theory.ts'
+import type { ProgressionStyle, Extensions } from '../song/song.ts'
 
 export interface ReverbSettings {
   size: number
@@ -53,6 +54,14 @@ export interface ComposeSettings {
   humanise: number
   /** 0..1 — probability a bar deviates from the previous figure. */
   variation: number
+  /** How the progression chooses its next chord. The dials always say 'drift'. */
+  style: ProgressionStyle
+  /** Scale degrees the 'custom' style cycles through. */
+  degrees: readonly number[]
+  /** Which chord tones to stack; 'auto' lets richness decide. */
+  extensions: Extensions
+  /** First bar of the harmony section in force. A section start is always a chord change. */
+  sectionStart: number
 }
 
 export interface Patch {
@@ -106,21 +115,28 @@ function snapPhrase(bars: number): number {
  * which would quietly bias every judgement made with these dials.
  *
  * The coefficients are a least-squares fit of measured RMS across the eight
- * scenes against the four macros that move it, flattening an 8 dB spread to
- * about 1.2 dB. The fit is specific to what the rack contains and how loud each
- * instrument is: it was re-derived when instruments moved onto fuzzy inference,
- * and a stale fit is worse than none — the previous one had inverted, making
- * sparse settings the loudest. Re-fit with `npm run audition` after changing
- * any instrument's level.
+ * scenes (plus sixteen seeded random points, at lower weight) against the six
+ * macros. The fit is specific to what the rack contains and how loud each
+ * instrument is: it was re-derived when instruments moved onto fuzzy inference
+ * and again when the default rack became pad, strings, shimmer, sub, bed and
+ * dust (and the sub, silent until then through a bug, became audible). A
+ * stale fit is worse than none — an earlier one had inverted, making sparse
+ * settings the loudest.
+ * Colour earns a term now that there is no kit masking it: the luminous modes
+ * sit higher, where the tilt filter and the ear's own curve both take level.
+ * Space and density fit to zero with this rack, so they are left out rather
+ * than carried as coefficients of nothing.
+ * Re-fit with `npm run audition` after changing any instrument's level.
  */
 function levelTrim(
   warmth: number,
-  _colour: number,
-  space: number,
+  colour: number,
+  _space: number,
   pulse: number,
-  density: number,
+  _density: number,
+  drift: number,
 ): number {
-  const db = 13.6 - 15.4 * warmth + 5.5 * density - 2.3 * pulse - 2.4 * space
+  const db = 10.2 - 11.0 * warmth - 0.3 * pulse + 2.0 * colour + 1.3 * drift
   return dbToGain(clamp(db, -6, 12))
 }
 
@@ -217,7 +233,7 @@ export function buildPatch(m: Macros): Patch {
     duckRelease: lerp(0.34, 0.16, pulse),
     chorusDepth: lerp(0.25, 0.7, drift),
     chorusMix: lerp(0.12, 0.42, space) * lerp(0.7, 1, drift),
-    gain: levelTrim(warmth, colour, space, pulse, density),
+    gain: levelTrim(warmth, colour, space, pulse, density, drift),
   }
 
   // ── Composition ──────────────────────────────────────────────────────────
@@ -240,6 +256,10 @@ export function buildPatch(m: Macros): Patch {
     swing,
     humanise: lerp(0.25, 0.75, warmth * 0.5 + drift * 0.5),
     variation: lerp(0.08, 0.8, drift),
+    style: 'drift',
+    degrees: [],
+    extensions: 'auto',
+    sectionStart: 0,
   }
 
   return { expression: expressionFor(m), reverb, echo, master, compose }

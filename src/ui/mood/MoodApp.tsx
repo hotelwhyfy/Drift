@@ -70,7 +70,9 @@ export function MoodApp() {
     player.reseed(plan.seed)
     player.setMacros(plan.macros)
     player.setRack(plan.slots)
-    void player.play()
+    // From the top, against the rack just sent, so its first bar is not lost
+    // to the one the engine had already scheduled.
+    void player.play(0)
 
     const journey = new Journey(plan.macros, plan.resting, plan.minutes)
     journey.start(performance.now())

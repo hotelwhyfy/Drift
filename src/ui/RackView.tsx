@@ -4,6 +4,8 @@ import { INSTRUMENTS, instrumentById } from '../instruments/registry.ts'
 import { XYPad } from './XYPad.tsx'
 import { WordField } from './WordField.tsx'
 import { LaneEditor } from './LaneEditor.tsx'
+import { KnobPanel } from './KnobPanel.tsx'
+import type { SlotReadout } from '../engine/rack.ts'
 import { makeLane } from '../automation/lane.ts'
 import type { Lane } from '../automation/lane.ts'
 import type { Expression, ExpressionKey } from '../fuzzy/expression.ts'
@@ -15,6 +17,8 @@ interface Props {
   global: Expression
   accent: string
   bars: number
+  /** Live per-slot state from the engine, when playing. */
+  readouts?: readonly SlotReadout[]
   onChange: (slots: SlotDesc[]) => void
 }
 
@@ -32,7 +36,7 @@ function explainerFor(defId: string): FuzzyEngine | null {
   return engine
 }
 
-export function RackView({ slots, global, accent, bars, onChange }: Props) {
+export function RackView({ slots, global, accent, bars, readouts, onChange }: Props) {
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [axes, setAxes] = useState<Record<string, [ExpressionKey, ExpressionKey]>>({})
@@ -61,7 +65,7 @@ export function RackView({ slots, global, accent, bars, onChange }: Props) {
     const id = `${defId}-${Date.now().toString(36)}`
     onChange([...slots, {
       id, defId, name: def.name, level: 0.8, muted: false, soloed: false,
-      expression: { ...global }, follow: 0.7, lanes: [],
+      expression: { ...global }, follow: 0.7, lanes: [], knobs: {},
     }])
     setAdding(false)
     setOpen(id)
@@ -94,6 +98,11 @@ export function RackView({ slots, global, accent, bars, onChange }: Props) {
               >
                 <span className={`slot-caret ${isOpen ? 'open' : ''}`} aria-hidden="true" />
                 {slot.name}
+                {Object.keys(slot.knobs).length > 0 && (
+                  <span className="slot-knobs" title="Knobs set by hand">
+                    {Object.keys(slot.knobs).length} set
+                  </span>
+                )}
                 {slot.lanes.length > 0 && (
                   <span className="slot-lanes" style={{ color: accent }}>
                     {slot.lanes.length}
@@ -187,11 +196,20 @@ export function RackView({ slots, global, accent, bars, onChange }: Props) {
                   </div>
                 </div>
 
+                <KnobPanel
+                  def={def}
+                  knobs={slot.knobs}
+                  live={readouts?.find((r) => r.id === slot.id)?.params}
+                  accent={accent}
+                  onChange={(knobs) => patch(slot.id, { knobs })}
+                />
+
                 <div className="lanes">
                   {slot.lanes.map((lane) => (
                     <LaneEditor
                       key={lane.id}
                       lane={lane}
+                      def={def}
                       accent={accent}
                       phase={(bars / Math.max(0.25, lane.bars)) % 1}
                       onChange={(next: Lane) => patch(slot.id, {

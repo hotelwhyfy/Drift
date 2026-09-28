@@ -35,6 +35,11 @@ export class Adsr {
     if (this.stage !== 'idle') this.stage = 'release'
   }
 
+  /** Gated and not yet released. */
+  get gated(): boolean {
+    return this.stage === 'attack' || this.stage === 'decay' || this.stage === 'sustain'
+  }
+
   get active(): boolean {
     return this.stage !== 'idle'
   }

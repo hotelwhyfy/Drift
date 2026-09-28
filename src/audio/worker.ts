@@ -1,6 +1,11 @@
 /// <reference lib="webworker" />
 import { Engine } from '../engine/engine.ts'
 import type { ToWorker, FromWorker } from './messages.ts'
+import { songFrames } from '../song/songFrames.ts'
+import type { Song } from '../song/song.ts'
+
+/** How long a song capture keeps rendering after the last bar, for the tails. */
+const SONG_TAIL_SECONDS = 8
 
 /**
  * The engine lives here, off the main thread.
@@ -37,6 +42,17 @@ self.onmessage = (e: MessageEvent<ToWorker>): void => {
       engine?.rack.sync(msg.slots)
       break
 
+    case 'song':
+      engine?.setSong(msg.song)
+      break
+
+    case 'seek':
+      // One bar is rendered silently first, so the pads and the room are
+      // already sounding when the jump is heard rather than fading up from
+      // nothing.
+      engine?.seek(msg.bar, { preroll: 1 })
+      break
+
     case 'reseed':
       // Re-rolled in place: the music changes from the next bar, the reverb
       // tail and the sounding notes carry across, and the bar count keeps
@@ -50,7 +66,7 @@ self.onmessage = (e: MessageEvent<ToWorker>): void => {
       const right = new Float32Array(msg.frames)
       engine.render(left, right, msg.frames)
       post(
-        { type: 'chunk', id: msg.id, left, right, snapshot: engine.snapshot() },
+        { type: 'chunk', id: msg.id, epoch: msg.epoch, left, right, snapshot: engine.snapshot() },
         [left.buffer, right.buffer],
       )
       break
@@ -59,9 +75,19 @@ self.onmessage = (e: MessageEvent<ToWorker>): void => {
     case 'capture': {
       // A separate engine, so capturing never disturbs what is playing.
       const capture = new Engine(sampleRate, msg.macros, msg.seed)
+      // A song capture plays the song once and then lets it ring out: forced
+      // to stop, whatever the song's own ending, so nothing new starts in the
+      // tail.
+      const song: Song = msg.mode === 'song' ? { ...msg.song, end: 'stop' } : msg.song
+      capture.setSong(song)
       capture.snapMacros(msg.macros)
       capture.rack.sync(msg.slots)
-      const frames = Math.floor(msg.seconds * sampleRate)
+      // From the top, against the rack and song it was just given — exactly
+      // what pressing play at bar one does.
+      capture.seek(0)
+      const frames = msg.mode === 'song'
+        ? songFrames(song, msg.macros, sampleRate) + Math.floor(SONG_TAIL_SECONDS * sampleRate)
+        : Math.floor(msg.seconds * sampleRate)
       const left = new Float32Array(frames)
       const right = new Float32Array(frames)
       // Rendered in slices so progress can be reported; the engine is
@@ -74,7 +100,7 @@ self.onmessage = (e: MessageEvent<ToWorker>): void => {
         done += n
         post({ type: 'captureProgress', id: msg.id, progress: done / frames })
       }
-      applyFades(left, right, sampleRate)
+      applyFades(left, right, sampleRate, msg.mode === 'song' ? SONG_TAIL_SECONDS * 0.6 : 4)
       post({ type: 'capture', id: msg.id, left, right, sampleRate }, [left.buffer, right.buffer])
       break
     }
@@ -86,9 +112,9 @@ self.onmessage = (e: MessageEvent<ToWorker>): void => {
  * out and a short fade in: starting abruptly is fine because the first thing
  * heard is an attack, but stopping abruptly on a reverb tail is not.
  */
-function applyFades(left: Float32Array, right: Float32Array, sr: number): void {
+function applyFades(left: Float32Array, right: Float32Array, sr: number, outSeconds: number): void {
   const inFrames = Math.min(Math.floor(sr * 0.35), left.length)
-  const outFrames = Math.min(Math.floor(sr * 4), left.length)
+  const outFrames = Math.min(Math.floor(sr * outSeconds), left.length)
   for (let i = 0; i < inFrames; i++) {
     const g = i / inFrames
     left[i] *= g

@@ -1,7 +1,8 @@
 import { sampleCurve, flatCurve } from './curve.ts'
 import type { Curve } from './curve.ts'
-import { createRng } from '../core/rng.ts'
-import type { Rng } from '../core/rng.ts'
+import { walkAt } from './walkAt.ts'
+import type { Envelope } from '../song/song.ts'
+import { sampleEnvelope } from '../song/sampleEnvelope.ts'
 import type { ExpressionKey } from '../fuzzy/expression.ts'
 
 /**
@@ -18,6 +19,8 @@ export type LaneSource =
   | { kind: 'lfo'; shape: 'sine' | 'triangle' | 'ramp' | 'square'; bars: number; phase: number }
   | { kind: 'walk'; smoothness: number; seed: number }
   | { kind: 'follow'; of: 'kick' | 'level'; }
+  /** Laid out on the song's timeline: read at the absolute bar, never looped. */
+  | { kind: 'song'; envelope: Envelope }
 
 export type LaneTarget =
   | { kind: 'expression'; key: ExpressionKey }
@@ -51,43 +54,9 @@ export function makeLane(id: string, target: LaneTarget): Lane {
   }
 }
 
-/**
- * A bounded random walk. Unlike an LFO it never repeats, and unlike white
- * noise it moves the way a hand does — which is what makes it usable as the
- * default "just keep it alive" source.
- */
-class Walk {
-  private value = 0.5
-  private velocity = 0
-  private rng: Rng
-  constructor(seed: number, private smoothness: number) {
-    this.rng = createRng(seed)
-  }
-  step(dt: number): number {
-    const stiffness = 0.6 + (1 - this.smoothness) * 5
-    const damping = 0.55 + this.smoothness * 0.4
-    // A spring pulling towards the middle keeps the walk from wandering off
-    // and sticking at an extreme, which an unconstrained walk eventually does.
-    this.velocity += ((0.5 - this.value) * stiffness + (this.rng() - 0.5) * 7) * dt
-    this.velocity *= Math.pow(damping, dt * 60)
-    this.value += this.velocity * dt
-    if (this.value < 0) { this.value = 0; this.velocity = Math.abs(this.velocity) * 0.4 }
-    if (this.value > 1) { this.value = 1; this.velocity = -Math.abs(this.velocity) * 0.4 }
-    return this.value
-  }
-  reset(seed: number, smoothness: number): void {
-    this.rng = createRng(seed)
-    this.smoothness = smoothness
-    this.value = 0.5
-    this.velocity = 0
-  }
-}
-
 export interface LaneContext {
   /** Musical position in bars, fractional. */
   bars: number
-  /** Seconds since the last evaluation. */
-  dt: number
   /** Level of the most recent kick, for follow lanes. */
   kick: number
   /** Overall output level, for follow lanes. */
@@ -95,12 +64,12 @@ export interface LaneContext {
 }
 
 /**
- * Evaluates lanes. Walk state has to live somewhere across evaluations, so the
- * evaluator is an object rather than a function.
+ * Evaluates lanes. Every source is a pure function of the musical position
+ * (or, for follow lanes, of the signal at that instant), so there is no state
+ * to carry between evaluations and nothing that depends on how playback got
+ * to where it is.
  */
 export class LaneEvaluator {
-  private walks = new Map<string, Walk>()
-
   value(lane: Lane, ctx: LaneContext): number {
     switch (lane.source.kind) {
       case 'curve':
@@ -115,16 +84,12 @@ export class LaneEvaluator {
         }
         return 0.5
       }
-      case 'walk': {
-        let walk = this.walks.get(lane.id)
-        if (!walk) {
-          walk = new Walk(lane.source.seed, lane.source.smoothness)
-          this.walks.set(lane.id, walk)
-        }
-        return walk.step(ctx.dt)
-      }
+      case 'walk':
+        return walkAt(lane.source.seed, lane.source.smoothness, ctx.bars)
       case 'follow':
         return lane.source.of === 'kick' ? ctx.kick : ctx.level
+      case 'song':
+        return sampleEnvelope(lane.source.envelope, ctx.bars)
     }
   }
 
@@ -139,9 +104,5 @@ export class LaneEvaluator {
       case 'scale':
         return current * (1 - lane.depth + v * lane.depth)
     }
-  }
-
-  reset(): void {
-    this.walks.clear()
   }
 }

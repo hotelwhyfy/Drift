@@ -4,7 +4,7 @@
 
 The central guarantee: the same seed, macros and rack render bit-identically,
 every time. In `src/core`, `src/dsp`, `src/voices`, `src/fuzzy`, `src/harmony`,
-`src/instruments` and `src/engine`:
+`src/instruments`, `src/song` and `src/engine`:
 
 - Never `Math.random()`. Use `createRng`, seeded via `deriveSeed`.
 - Seeds derive from stable musical coordinates — `rngAt(seed, 'bar', barIndex)`,
@@ -19,12 +19,21 @@ never as a test to relax.
 
 ### The control grid
 
-All control-rate work happens when `position % CONTROL_BLOCK === 0`, and no
-block straddles a bar line. This is not an optimisation. If control work
+All control-rate work happens when `samplesIntoBar % CONTROL_BLOCK === 0`, and
+no block straddles a bar line. This is not an optimisation. If control work
 followed the caller's buffer boundaries, playback (0.4 s chunks) would dispatch
 notes at different instants than a capture (2 s slices), and the export would
-diverge from what was heard. Any new control-rate work goes inside
-`Engine.control()`, never in the per-sample loop.
+diverge from what was heard. The grid restarts at every bar line so that a
+seek lands on it exactly; an absolute grid would put bar N's control ticks
+somewhere that depends on every earlier tempo. Any new control-rate work goes
+inside `Engine.control()`, never in the per-sample loop.
+
+A bar's patterns read parameters evaluated at its downbeat (`Rack.prepareBar`),
+never whatever the last tick of the previous bar left behind. Follow lanes read
+silence there: they shape how a bar sounds, never what it plays. Anything that
+automates — lanes, song envelopes, harmony sections — must be a pure function of
+the bar position; `tests/seek.test.ts` checks that a seeked bar schedules
+exactly what a played one does.
 
 ## Where decisions live
 
@@ -33,14 +42,22 @@ Dependencies run one way:
 ```
 core <- dsp <- voices <- instruments <- engine <- ui
 core <- fuzzy/harmony <- instruments
+macros <- song <- engine
 ```
+
+`src/song` is the timeline: envelopes for the six dials, harmony sections, and
+the song's length and ending. Every function in it takes a bar position and
+returns a value; none of it holds state.
 
 - **An instrument may not choose a pitch.** It emits `NoteIntent`; the shared
   `Resolver` decides. This is what makes "impossible to play a wrong note"
   structural rather than aspirational — don't add an escape hatch.
 - **An instrument may not set its own level relative to others.** The rack does.
-- Nothing in `core`, `dsp`, `voices`, `fuzzy`, `harmony`, `instruments` or
-  `engine` may touch the DOM or Node built-ins. They run unchanged in a Web
+- **An instrument may not bypass the resolver through its sound either.**
+  Shimmer's grains sit on octaves of resolved notes and nothing else; a fifth
+  above a resolved third can be a note the resolver never approved.
+- Nothing in `core`, `dsp`, `voices`, `fuzzy`, `harmony`, `instruments`, `song`
+  or `engine` may touch the DOM or Node built-ins. They run unchanged in a Web
   Worker and in bare Node, which is what makes the tests and `npm run audition`
   possible.
 

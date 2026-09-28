@@ -5,7 +5,7 @@ import { Visualizer } from './Visualizer.tsx'
 import { Player } from '../audio/player.ts'
 import { MACRO_INFO, DEFAULT_MACROS, SCENES } from '../macros/macros.ts'
 import type { Macros, MacroKey } from '../macros/macros.ts'
-import { buildPatch, modeNameAt, expressionFor } from '../macros/patch.ts'
+import { buildPatch, expressionFor } from '../macros/patch.ts'
 import { RackView } from './RackView.tsx'
 import type { SlotDesc } from '../engine/rack.ts'
 import { DEFAULT_RACK } from '../engine/engine.ts'
@@ -15,6 +15,17 @@ import { readProject, writeProject, projectFilename } from '../project/project.t
 import { saveTextFile, openTextFile, isCancellation, stripExtension } from '../project/filePicker.ts'
 import { deriveSeed } from '../core/rng.ts'
 import type { EngineSnapshot } from '../engine/engine.ts'
+import { Timeline } from './Timeline.tsx'
+import { DEFAULT_SONG } from '../song/song.ts'
+import type { Song } from '../song/song.ts'
+import { macrosAt } from '../song/macrosAt.ts'
+import { setPointAt } from '../song/setPointAt.ts'
+import { songSeconds } from '../song/songSeconds.ts'
+import { sectionAt } from '../song/sectionAt.ts'
+import { composeAt } from '../song/composeAt.ts'
+import { HarmonyRow } from './HarmonyRow.tsx'
+import { NOTE_NAMES } from '../core/theory.ts'
+import { MACRO_COLOURS } from './laneColours.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]
 const STORAGE_KEY = 'drift.state.v1'
@@ -37,6 +48,7 @@ interface Session {
   macros: Macros
   seedName: string
   slots: SlotDesc[]
+  song: Song
   projectName: string
 }
 
@@ -54,6 +66,7 @@ function defaultSlots(): SlotDesc[] {
     // six-dial instrument until someone deliberately breaks a slot away.
     follow: 1,
     lanes: [],
+    knobs: {},
   }))
 }
 
@@ -62,6 +75,7 @@ function blankSession(): Session {
     macros: DEFAULT_MACROS,
     seedName: randomSeedName(),
     slots: defaultSlots(),
+    song: DEFAULT_SONG,
     projectName: 'untitled',
   }
 }
@@ -84,6 +98,7 @@ function loadSession(): Session {
         macros: project.macros,
         seedName: project.seedName,
         slots: project.slots.length > 0 ? project.slots : defaultSlots(),
+        song: project.song,
         projectName: project.name,
       }
     }
@@ -127,13 +142,30 @@ export function App() {
   const [playing, setPlaying] = useState(false)
   const [snapshot, setSnapshot] = useState<EngineSnapshot | null>(null)
   const [captureProgress, setCaptureProgress] = useState<number | null>(null)
-  const [captureMinutes, setCaptureMinutes] = useState(3)
+  /** Minutes, or 'song' for the song once through. */
+  const [captureLength, setCaptureLength] = useState<number | 'song'>('song')
+  const [song, setSong] = useState<Song>(initial.song)
+  /** Where playback starts from, and where the playhead rests when stopped. */
+  const [cursor, setCursor] = useState(0)
   const [projectName, setProjectName] = useState(initial.projectName)
   const [notice, setNotice] = useState<string | null>(null)
   const playerRef = useRef<Player | null>(null)
 
-  const accent = accentFor(macros.colour)
-  const patch = useMemo(() => buildPatch(macros), [macros])
+  const playhead = playing && snapshot ? snapshot.bar + snapshot.barPhase : cursor
+  /** The dials as the music has them at the playhead: the song's where it drives them. */
+  const heard = useMemo(
+    () => (playing && snapshot ? snapshot.macros : macrosAt(song, macros, cursor).macros),
+    [playing, snapshot, song, macros, cursor],
+  )
+  const accent = accentFor(heard.colour)
+  const patch = useMemo(() => buildPatch(heard), [heard])
+  const seconds = useMemo(() => songSeconds(song, macros), [song, macros])
+  /** Key and mode at the playhead, sections included. */
+  const harmonyNow = useMemo(() => {
+    if (playing && snapshot) return { mode: snapshot.modeName, root: snapshot.rootMidi }
+    const s = composeAt(patch.compose, sectionAt(song, cursor))
+    return { mode: s.mode.name, root: s.rootMidi }
+  }, [playing, snapshot, patch, song, cursor])
 
   // One Player for the life of the page. Recreating it would rebuild the
   // AudioContext, and browsers limit how many of those a page may have.
@@ -166,12 +198,25 @@ export function App() {
   }, [slots, player])
 
   useEffect(() => {
+    player.setSong(song)
+  }, [song, player])
+
+  // A song that stopped by itself goes back to the top, ready to play again.
+  const lastSnapshot = useRef<EngineSnapshot | null>(null)
+  lastSnapshot.current = snapshot
+  useEffect(() => {
+    if (playing) return
+    const last = lastSnapshot.current
+    if (last?.ended) setCursor(0)
+  }, [playing])
+
+  useEffect(() => {
     // Debounced: dragging a dial fires this every frame, and serialising every
     // automation curve at 60 Hz is wasted work.
     const timer = window.setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, writeProject(
-          { name: projectName, macros, seedName, slots },
+          { name: projectName, macros, seedName, slots, song },
           new Date().toISOString(),
         ))
       } catch {
@@ -179,19 +224,53 @@ export function App() {
       }
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [macros, seedName, slots, projectName])
+  }, [macros, seedName, slots, song, projectName])
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', accent)
   }, [accent])
 
+  /**
+   * Turning a dial the song drives writes into the song at the playhead,
+   * rather than fighting it — and while playing, that leaves a trail of
+   * points, which is recording automation by hand.
+   */
   const setMacro = useCallback((key: MacroKey, v: number) => {
+    const track = song.macros[key]
+    if (track?.enabled && track.envelope.points.length > 0) {
+      const at = Math.round(playhead * 4) / 4
+      setSong({ ...song, macros: { ...song.macros, [key]: { ...track, envelope: setPointAt(track.envelope, at, v) } } })
+      return
+    }
     setMacros((m) => ({ ...m, [key]: v }))
-  }, [])
+  }, [song, playhead])
+
+  const unlinkMacro = useCallback((key: MacroKey) => {
+    const track = song.macros[key]
+    if (!track) return
+    // The dial keeps the value it had, so letting go is not a jump.
+    setMacros((m) => ({ ...m, [key]: heard[key] }))
+    setSong({ ...song, macros: { ...song.macros, [key]: { ...track, enabled: false } } })
+  }, [song, heard])
 
   const toggle = useCallback(() => {
-    if (player.isPlaying) player.stop()
-    else void player.play()
+    if (player.isPlaying) {
+      player.stop()
+      if (snapshot) setCursor(snapshot.bar)
+    } else {
+      // Until audio from the new start is heard, the playhead sits on the
+      // cursor rather than wherever the last snapshot left it.
+      setSnapshot(null)
+      void player.play(Math.floor(cursor))
+    }
+  }, [player, snapshot, cursor])
+
+  const seek = useCallback((bar: number) => {
+    setCursor(bar)
+    if (player.isPlaying) {
+      setSnapshot(null)
+      player.seek(bar)
+    }
   }, [player])
 
   /**
@@ -210,22 +289,26 @@ export function App() {
 
   const capture = useCallback(async () => {
     setCaptureProgress(0)
-    const blob = await player.capture(captureMinutes * 60)
+    const blob = captureLength === 'song'
+      ? await player.capture('song')
+      : await player.capture('minutes', captureLength * 60)
     setCaptureProgress(null)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `drift-${seedName}-${captureMinutes}min.wav`
+    a.download = captureLength === 'song'
+      ? `drift-${projectName !== 'untitled' ? projectName : seedName}.wav`
+      : `drift-${seedName}-${captureLength}min.wav`
     a.click()
     // Revoked on a delay: revoking immediately can cancel the download in
     // some browsers before it has read the blob.
     setTimeout(() => URL.revokeObjectURL(url), 30_000)
-  }, [player, captureMinutes, seedName])
+  }, [player, captureLength, seedName, projectName])
 
   const saveProject = useCallback(async () => {
     try {
       const text = writeProject(
-        { name: projectName, macros, seedName, slots },
+        { name: projectName, macros, seedName, slots, song },
         new Date().toISOString(),
       )
       const result = await saveTextFile(text, projectFilename(projectName))
@@ -237,13 +320,15 @@ export function App() {
       if (isCancellation(error)) return
       setNotice(error instanceof Error ? error.message : 'Could not save.')
     }
-  }, [projectName, macros, seedName, slots])
+  }, [projectName, macros, seedName, slots, song])
 
   const loadProject = useCallback((text: string, filename?: string) => {
     try {
       const { project, warnings } = readProject(text)
       setMacros(project.macros)
       setSlots(project.slots)
+      setSong(project.song)
+      setCursor(0)
       setSeedName(project.seedName)
       // The filename wins over the name inside the file: it is what the user
       // last chose to call it, and what they will look for next time.
@@ -329,15 +414,11 @@ export function App() {
           )}
         </h1>
         <div className="state">
-          <span className="mode">{modeNameAt(macros.colour)}</span>
+          <span className="mode">{NOTE_NAMES[harmonyNow.root % 12]} {harmonyNow.mode}</span>
           <span className="dot" />
-          <span>{patch.compose.tempo.toFixed(0)} bpm</span>
-          {snapshot && playing && (
-            <>
-              <span className="dot" />
-              <span className="bar-count">bar {snapshot.bar + 1}</span>
-            </>
-          )}
+          <span>{(playing && snapshot ? snapshot.tempo : patch.compose.tempo).toFixed(0)} bpm</span>
+          <span className="dot" />
+          <span className="bar-count">bar {Math.floor(playhead) + 1} / {song.lengthBars}</span>
           <div className="file-actions">
             <button type="button" onClick={() => void openProject()} title="Open project (⌘O)" aria-label="Open project">
               <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -357,24 +438,67 @@ export function App() {
       <Visualizer player={player} playing={playing} accent={accent} />
 
       <section className="dials" aria-label="Sound controls">
-        {MACRO_INFO.map((info) => (
-          <Dial
-            key={info.key}
-            label={info.label}
-            low={info.low}
-            high={info.high}
-            value={macros[info.key]}
-            accent={accent}
-            onChange={(v) => setMacro(info.key, v)}
-          />
-        ))}
+        {MACRO_INFO.map((info) => {
+          const track = song.macros[info.key]
+          const driven = !!track?.enabled && track.envelope.points.length > 0
+          return (
+            <div className={`dial-slot ${driven ? 'driven' : ''}`} key={info.key}>
+              <Dial
+                label={info.label}
+                low={info.low}
+                high={info.high}
+                value={driven ? heard[info.key] : macros[info.key]}
+                // A dial the song drives wears its lane's colour, so the two
+                // read as one control in two places.
+                accent={driven ? MACRO_COLOURS[info.key] : accent}
+                onChange={(v) => setMacro(info.key, v)}
+              />
+              {driven && (
+                <button
+                  type="button"
+                  className="dial-unlink"
+                  onClick={() => unlinkMacro(info.key)}
+                  title="The song is driving this dial. Turning it writes into the song at the playhead; click to take it back."
+                >
+                  <span className="tl-swatch" style={{ borderColor: MACRO_COLOURS[info.key], background: MACRO_COLOURS[info.key] }} />
+                  on timeline ×
+                </button>
+              )}
+            </div>
+          )
+        })}
       </section>
+
+      <Timeline
+        song={song}
+        dials={macros}
+        slots={slots}
+        playhead={playhead}
+        playing={playing}
+        accent={accent}
+        onSongChange={setSong}
+        onSlotsChange={setSlots}
+        onSeek={seek}
+      >
+        {(scale, width) => (
+          <HarmonyRow
+            song={song}
+            scale={scale}
+            width={width}
+            playhead={playhead}
+            dialMode={patch.compose.mode}
+            accent={accent}
+            onChange={setSong}
+          />
+        )}
+      </Timeline>
 
       <RackView
         slots={slots}
-        global={expressionFor(macros)}
+        global={expressionFor(heard)}
         accent={accent}
         bars={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
+        readouts={snapshot?.slots}
         onChange={setSlots}
       />
 
@@ -399,19 +523,27 @@ export function App() {
           aria-label={playing ? 'Stop' : 'Play'}
         >
           <span className="play-glyph">{playing ? '■' : '▶'}</span>
-          <span>{playing ? 'endless' : 'begin'}</span>
+          <span>{playing ? 'stop' : cursor > 0 ? `from ${Math.floor(cursor) + 1}` : 'begin'}</span>
         </button>
 
         <SeedField value={seedName} onCommit={applySeed} onShuffle={reseed} />
 
         <div className="capture">
           <div className="lengths" role="group" aria-label="Capture length">
+            <button
+              type="button"
+              className={captureLength === 'song' ? 'on' : ''}
+              onClick={() => setCaptureLength('song')}
+              title={`The song once through, ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')} plus its tail`}
+            >
+              song
+            </button>
             {CAPTURE_LENGTHS.map((m) => (
               <button
                 key={m}
                 type="button"
-                className={captureMinutes === m ? 'on' : ''}
-                onClick={() => setCaptureMinutes(m)}
+                className={captureLength === m ? 'on' : ''}
+                onClick={() => setCaptureLength(m)}
               >
                 {m}m
               </button>

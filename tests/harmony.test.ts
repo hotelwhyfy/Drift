@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { Resolver, beatStrength } from '../src/harmony/resolver.ts'
 import type { HarmonicContext, NoteIntent, Role } from '../src/harmony/resolver.ts'
-import { MODES, buildChord, voiceNear } from '../src/core/theory.ts'
+import { MODES, buildChord, voiceNear, chordStack } from '../src/core/theory.ts'
+import { Harmony } from '../src/compose/harmony.ts'
+import { Engine } from '../src/engine/engine.ts'
+import { buildPatch } from '../src/macros/patch.ts'
+import { DEFAULT_MACROS } from '../src/macros/macros.ts'
+import { DEFAULT_SONG, autoSection } from '../src/song/song.ts'
+import type { Song, HarmonySection } from '../src/song/song.ts'
+import { composeAt } from '../src/song/composeAt.ts'
+import { sectionAt } from '../src/song/sectionAt.ts'
 
 
 const dorian = MODES[2]
@@ -166,5 +174,67 @@ describe('the resolver', () => {
       expect(midi).toBeGreaterThanOrEqual(register.centre - register.span - 6)
       expect(midi).toBeLessThanOrEqual(register.centre + register.span + 6)
     }
+  })
+})
+
+describe('harmony sections', () => {
+  const base = buildPatch(DEFAULT_MACROS).compose
+
+  it('plays a hand-picked progression on the bars it was asked for', () => {
+    const section: HarmonySection = { ...autoSection(0), style: 'custom', degrees: [0, 5, 3, 4], chordBars: 2 }
+    const h = new Harmony(1)
+    const at = (bar: number): number => h.at(bar, () => composeAt(base, section)).degree
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map(at)).toEqual([0, 0, 5, 5, 3, 3, 4, 4, 0])
+  })
+
+  it('changes chord at a section start and is the same however it is reached', () => {
+    const song: Song = {
+      ...DEFAULT_SONG,
+      harmony: [
+        { ...autoSection(0), chordBars: 8 },
+        { ...autoSection(13), key: 2, mode: 'lydian', style: 'circle', chordBars: 2 },
+      ],
+    }
+    const settingsAt = (bar: number) => composeAt(base, sectionAt(song, bar))
+    const walked = new Harmony(6)
+    const played = Array.from({ length: 30 }, (_, bar) => walked.at(bar, settingsAt))
+    // Bar 13 is not on the old eight-bar grid, but a section start is a chord change.
+    expect(played[13].degree).toBe(0)
+    expect(played[15].degree).toBe(3)
+    for (const bar of [12, 13, 14, 21, 29]) {
+      expect(new Harmony(6).at(bar, settingsAt)).toEqual(played[bar])
+    }
+  })
+
+  it('leaves the third out of suspended chords', () => {
+    for (const richness of [0, 0.5, 1]) {
+      expect(chordStack('sus4', richness)).not.toContain(2)
+      expect(chordStack('sus2', richness)).not.toContain(2)
+    }
+    expect(chordStack('ninth', 0)).toEqual([0, 2, 4, 6, 8])
+  })
+
+  it('puts the song in the key and mode a section asks for', () => {
+    // A dorian: A B C D E F# G.
+    const song: Song = { ...DEFAULT_SONG, harmony: [{ ...autoSection(0), key: 9, mode: 'dorian' }] }
+    const engine = new Engine(24000, DEFAULT_MACROS, 4)
+    engine.setSong(song)
+    engine.snapMacros(DEFAULT_MACROS)
+    engine.seek(0)
+    const allowed = new Set([9, 11, 0, 2, 4, 6, 7])
+    let checked = 0
+    for (let bar = 0; bar < 6; bar++) {
+      for (const ev of engine.barEvents) {
+        // Chordal and bass parts only: the melodic line may take a chromatic
+        // approach on its weakest steps, by design.
+        if (ev.midi === undefined || !/^(pad|sub)/.test(ev.slotId)) continue
+        expect(allowed.has(ev.midi % 12)).toBe(true)
+        checked++
+      }
+      engine.render(new Float32Array(24000 * 4), new Float32Array(24000 * 4), 24000 * 4)
+    }
+    expect(checked).toBeGreaterThan(5)
+    expect(engine.snapshot().modeName).toBe('dorian')
+    expect(engine.snapshot().rootMidi % 12).toBe(9)
   })
 })

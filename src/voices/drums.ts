@@ -2,7 +2,7 @@ import { Decay } from '../dsp/env.ts'
 import { Phasor, sineFrom } from '../dsp/osc.ts'
 import { Svf, DcBlock } from '../dsp/svf.ts'
 import { Noise } from '../dsp/noise.ts'
-import { panGains, clamp01, lerp } from '../core/curves.ts'
+import { clamp, clamp01, lerp } from '../core/curves.ts'
 import type { Rng } from '../core/rng.ts'
 import type { Stereo } from './types.ts'
 
@@ -11,21 +11,66 @@ export type DrumHit = 'kick' | 'snare' | 'hat' | 'openHat' | 'rim'
 export interface DrumParams {
   /** 0..1 — lowpass on the whole kit. Low values give the dusty sampled feel. */
   tone: number
-  /** 0..1 — how far the kick's pitch envelope falls. */
-  kickWeight: number
-  snareBody: number
-  /** 0..1 — swing amount is applied by the composer, not here. */
   level: number
-  hatLevel: number
-  snareLevel: number
+
+  /** Resting pitch of the kick's body, Hz. */
+  kickPitch: number
+  /** Seconds. */
+  kickDecay: number
+  /** 0..1 — how far the pitch sweeps at the attack, and how much click. */
+  kickPunch: number
   kickLevel: number
+  kickPan: number
+
+  /** Pitch of the lower body tone, Hz; the upper one sits a ratio above. */
+  snarePitch: number
+  /** Seconds, for the noise; the body rings a little shorter. */
+  snareDecay: number
+  /** 0..1 — body tone against the wires. */
+  snareBody: number
+  snareLevel: number
+  snarePan: number
+
+  rimPitch: number
+  rimDecay: number
+  rimLevel: number
+  rimPan: number
+
+  /** Multiplier on the hats' filter frequency. */
+  hatPitch: number
+  hatDecay: number
+  hatLevel: number
+  hatPan: number
+  openHatDecay: number
+  openHatLevel: number
+  openHatPan: number
+}
+
+export const DEFAULT_DRUM_PARAMS: DrumParams = {
+  tone: 0.5, level: 0.5,
+  kickPitch: 55, kickDecay: 0.4, kickPunch: 0.6, kickLevel: 1, kickPan: 0,
+  snarePitch: 182, snareDecay: 0.17, snareBody: 0.4, snareLevel: 0.6, snarePan: 0,
+  rimPitch: 410, rimDecay: 0.042, rimLevel: 0.48, rimPan: 0,
+  hatPitch: 1, hatDecay: 0.036, hatLevel: 0.5, hatPan: 0.12,
+  openHatDecay: 0.28, openHatLevel: 0.45, openHatPan: -0.2,
+}
+
+/** Equal-power gains for a pan, written into a pair rather than allocated. */
+function setPan(pan: number, into: Float64Array): void {
+  const p = (clamp(pan, -1, 1) + 1) * 0.25 * Math.PI
+  into[0] = Math.cos(p)
+  into[1] = Math.sin(p)
 }
 
 /**
- * A synthesised kit rather than samples, so it can be swept continuously by a
- * macro. Every piece is a decaying envelope over either a pitch-swept sine or
- * filtered noise — which is, in fact, all an acoustic drum is: a body resonance
- * and a burst of air.
+ * A synthesised kit rather than samples, so every piece can be swept
+ * continuously — by a macro, a knob or a lane. Each is a decaying envelope over
+ * either a pitch-swept sine or filtered noise, which is, in fact, all an
+ * acoustic drum is: a body resonance and a burst of air.
+ *
+ * Every piece has its own pitch, length, level and place in the field. The open
+ * hat has its own envelope and filter, and a closed hat chokes it, the way a
+ * hi-hat pedal does.
  */
 export class Drums {
   private kickPhase: Phasor
@@ -42,7 +87,8 @@ export class Drums {
 
   private hatAmp: Decay
   private hatFilter: Svf
-  private hatPan = 0.12
+  private openAmp: Decay
+  private openFilter: Svf
 
   private rimAmp: Decay
   private rimPhase: Phasor
@@ -51,9 +97,14 @@ export class Drums {
   private busFilterL: Svf
   private busFilterR: Svf
   private noise: Noise
-  private params: DrumParams
-  /** Level of the last kick, for the sidechain duck to read. */
-  kickTrigger = 0
+  private params: DrumParams = DEFAULT_DRUM_PARAMS
+  private readonly nyquistSafe: number
+
+  private kickGain = new Float64Array(2)
+  private snareGain = new Float64Array(2)
+  private rimGain = new Float64Array(2)
+  private hatGain = new Float64Array(2)
+  private openGain = new Float64Array(2)
 
   constructor(sampleRate: number, rng: Rng) {
     this.kickPhase = new Phasor(sampleRate)
@@ -67,55 +118,63 @@ export class Drums {
     this.snareFilter = new Svf(sampleRate)
     this.hatAmp = new Decay(sampleRate)
     this.hatFilter = new Svf(sampleRate)
+    this.openAmp = new Decay(sampleRate)
+    this.openFilter = new Svf(sampleRate)
     this.rimAmp = new Decay(sampleRate)
     this.rimPhase = new Phasor(sampleRate)
     this.rimFilter = new Svf(sampleRate)
     this.busFilterL = new Svf(sampleRate)
     this.busFilterR = new Svf(sampleRate)
     this.noise = new Noise(rng)
-    this.params = {
-      tone: 0.5, kickWeight: 0.6, snareBody: 0.4, level: 0.5,
-      hatLevel: 0.5, snareLevel: 0.6, kickLevel: 1,
-    }
-    this.snarePhaseA.setHz(182)
-    this.snarePhaseB.setHz(331)
-    this.rimPhase.setHz(410)
+    this.nyquistSafe = sampleRate * 0.45
+    this.set(DEFAULT_DRUM_PARAMS)
   }
 
   set(p: DrumParams): void {
+    const old = this.params
     this.params = p
+    if (p.kickPan !== old.kickPan || this.kickGain[0] === 0) setPan(p.kickPan, this.kickGain)
+    if (p.snarePan !== old.snarePan || this.snareGain[0] === 0) setPan(p.snarePan, this.snareGain)
+    if (p.rimPan !== old.rimPan || this.rimGain[0] === 0) setPan(p.rimPan, this.rimGain)
+    if (p.hatPan !== old.hatPan || this.hatGain[0] === 0) setPan(p.hatPan, this.hatGain)
+    if (p.openHatPan !== old.openHatPan || this.openGain[0] === 0) setPan(p.openHatPan, this.openGain)
   }
 
   hit(kind: DrumHit, velocity: number): void {
+    const p = this.params
     switch (kind) {
       case 'kick':
-        this.kickAmp.set(lerp(0.16, 0.62, clamp01(this.params.kickWeight)))
+        this.kickAmp.set(p.kickDecay)
         this.kickPitch.set(0.055)
         this.kickClick.set(0.004)
         this.kickAmp.trigger(velocity)
         this.kickPitch.trigger(1)
-        this.kickClick.trigger(velocity)
+        this.kickClick.trigger(velocity * lerp(0.3, 1.2, clamp01(p.kickPunch)))
         this.kickPhase.phase = 0
-        this.kickTrigger = velocity
         break
       case 'snare':
-        this.snareAmp.set(lerp(0.09, 0.26, this.params.snareBody))
-        this.snareBodyAmp.set(0.1)
+        this.snareAmp.set(p.snareDecay)
+        this.snareBodyAmp.set(p.snareDecay * 0.6)
+        this.snarePhaseA.setHz(p.snarePitch)
+        this.snarePhaseB.setHz(p.snarePitch * 1.82)
         this.snareAmp.trigger(velocity)
         this.snareBodyAmp.trigger(velocity)
         break
       case 'rim':
-        this.rimAmp.set(0.042)
+        this.rimAmp.set(p.rimDecay)
+        this.rimPhase.setHz(p.rimPitch)
         this.rimAmp.trigger(velocity)
         this.rimPhase.phase = 0
         break
       case 'hat':
-        this.hatAmp.set(0.036)
+        this.hatAmp.set(p.hatDecay)
         this.hatAmp.trigger(velocity)
+        // The pedal closes: an open hat still ringing is cut short.
+        this.openAmp.set(0.012)
         break
       case 'openHat':
-        this.hatAmp.set(0.28)
-        this.hatAmp.trigger(velocity)
+        this.openAmp.set(p.openHatDecay)
+        this.openAmp.trigger(velocity)
         break
     }
   }
@@ -126,16 +185,16 @@ export class Drums {
     let r = 0
 
     if (this.kickAmp.active) {
-      // 52 Hz base, swept up by nearly two octaves at the transient. Without
-      // the sweep it is a sine blip; with it, it is a drum.
+      // Swept up by up to two octaves at the transient. Without the sweep it
+      // is a sine blip; with it, it is a drum.
       const sweep = this.kickPitch.process()
-      this.kickPhase.setHz(lerp(48, 62, p.kickWeight) * (1 + sweep * sweep * 2.6))
+      this.kickPhase.setHz(p.kickPitch * (1 + sweep * sweep * lerp(0.8, 4, clamp01(p.kickPunch))))
       const body = sineFrom(this.kickPhase.step())
       const click = this.noise.white() * this.kickClick.process() * 0.35
       const s = this.kickDc.process(Math.tanh((body + click) * 1.35)) *
         this.kickAmp.process() * p.kickLevel
-      l += s
-      r += s
+      l += s * this.kickGain[0]
+      r += s * this.kickGain[1]
     }
 
     if (this.snareAmp.active || this.snareBodyAmp.active) {
@@ -145,29 +204,38 @@ export class Drums {
       const body =
         (sineFrom(this.snarePhaseA.step()) + sineFrom(this.snarePhaseB.step()) * 0.6) * bodyEnv * 0.4
       const s = (n * 0.8 + body) * p.snareLevel
-      l += s * 0.98
-      r += s
+      l += s * this.snareGain[0]
+      r += s * this.snareGain[1]
     }
 
     if (this.rimAmp.active) {
-      this.rimFilter.set(1750, 3.2)
+      this.rimFilter.set(Math.min(this.nyquistSafe, p.rimPitch * 4.27), 3.2)
       const e = this.rimAmp.process()
       const s = (this.rimFilter.bandpass(this.noise.white()) * 0.6 +
-        sineFrom(this.rimPhase.step()) * 0.5) * e * p.snareLevel * 0.8
-      l += s
-      r += s * 0.9
+        sineFrom(this.rimPhase.step()) * 0.5) * e * p.rimLevel * 0.8
+      l += s * this.rimGain[0]
+      r += s * this.rimGain[1]
     }
 
+    const hatHz = Math.min(this.nyquistSafe, lerp(5200, 9500, p.tone) * p.hatPitch)
     if (this.hatAmp.active) {
-      this.hatFilter.set(lerp(5200, 9500, p.tone), 1.1)
+      this.hatFilter.set(hatHz, 1.1)
       const s = this.hatFilter.highpass(this.noise.white()) * this.hatAmp.process() * p.hatLevel * 0.45
-      const g = panGains(this.hatPan)
-      l += s * g[0]
-      r += s * g[1]
+      l += s * this.hatGain[0]
+      r += s * this.hatGain[1]
+    }
+
+    if (this.openAmp.active) {
+      // A little lower and looser than the closed hat: more of the cymbal's
+      // wash, less of the tick.
+      this.openFilter.set(hatHz * 0.88, 0.8)
+      const s = this.openFilter.highpass(this.noise.white()) * this.openAmp.process() * p.openHatLevel * 0.4
+      l += s * this.openGain[0]
+      r += s * this.openGain[1]
     }
 
     // One lowpass across the kit is the "sampled off a record" move: it glues
-    // the pieces into a single recorded object rather than four synth voices.
+    // the pieces into a single recorded object rather than five synth voices.
     const cut = lerp(1400, 15000, clamp01(p.tone) ** 1.4)
     this.busFilterL.set(cut, 0.6)
     this.busFilterR.set(cut, 0.6)

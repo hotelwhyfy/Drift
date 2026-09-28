@@ -1,8 +1,8 @@
 import type { Rng } from '../core/rng.ts'
 import type { Stereo } from '../voices/types.ts'
-import type { RuleBase } from '../fuzzy/inference.ts'
+import type { RuleBase, OutputSpec } from '../fuzzy/inference.ts'
 import type { Expression } from '../fuzzy/expression.ts'
-import type { NoteIntent, Role } from '../harmony/resolver.ts'
+import type { NoteIntent, Register, Role } from '../harmony/resolver.ts'
 import type { DrumHit } from '../voices/drums.ts'
 
 /** What an instrument's sound engine must be able to do. */
@@ -29,6 +29,34 @@ export interface PatternContext {
   readonly rng: Rng
   /** Tempo, so an instrument can reason in seconds if it must. */
   readonly tempo: number
+  /**
+   * A generator keyed to this instrument and whatever coordinates are given —
+   * for decisions that belong to a phrase rather than a bar, so four bars can
+   * share a groove and still be seekable.
+   */
+  readonly phraseRng: (...parts: (string | number)[]) => Rng
+}
+
+/**
+ * A parameter no rule sets. It sits at `default` (normalised 0..1) until a
+ * knob or a lane moves it — for choices like a drum pattern's style, where
+ * "the rules decide" would mean nothing.
+ */
+export interface FixedParam extends OutputSpec {
+  readonly default: number
+}
+
+/**
+ * One knob on an instrument's panel. Names either a rule output (the knob
+ * overrides what the rules inferred) or a fixed parameter.
+ */
+export interface ControlSpec {
+  readonly param: string
+  readonly label: string
+  /** Heading the knob is grouped under. */
+  readonly group?: string
+  /** An enumerated choice: the parameter's value, floored, indexes this. */
+  readonly options?: readonly string[]
 }
 
 /**
@@ -56,4 +84,12 @@ export interface InstrumentDef {
   readonly hits?: (ctx: PatternContext) => PercussionEvent[]
   /** Textural instruments make no events; they simply run. */
   readonly continuous?: boolean
+  readonly fixed?: Readonly<Record<string, FixedParam>>
+  /** The knobs shown for this instrument, in order. */
+  readonly controls?: readonly ControlSpec[]
+  /**
+   * Move the register the resolver places this instrument's notes in. The
+   * resolver still chooses every pitch; this only says where to look.
+   */
+  readonly register?: (params: Readonly<Record<string, number>>, base: Register) => Register
 }

@@ -7,6 +7,7 @@
 import { clamp, clamp01 } from './curves.ts'
 import type { Rng } from './rng.ts'
 import { pickWeighted } from './rng.ts'
+import type { Extensions } from '../song/song.ts'
 
 export interface Mode {
   readonly name: string
@@ -22,6 +23,9 @@ export const MODES: readonly Mode[] = [
   { name: 'ionian', steps: [0, 2, 4, 5, 7, 9, 11] },
   { name: 'lydian', steps: [0, 2, 4, 6, 7, 9, 11] },
 ]
+
+/** Pitch-class names, spelled the way they most often appear in these modes. */
+export const NOTE_NAMES: readonly string[] = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B']
 
 export function modeAt(colour: number): Mode {
   const i = Math.round(clamp01(colour) * (MODES.length - 1))
@@ -96,13 +100,34 @@ export function buildChord(
   rootMidi: number,
   degree: number,
   richness: number,
+  extensions: Extensions = 'auto',
 ): readonly number[] {
+  return chordStack(extensions, richness).map((s) => rootMidi + degreeToSemitone(mode, degree + s))
+}
+
+/**
+ * Which scale steps above the chord's root to stack, as degree offsets. The
+ * suspended shapes replace the third with the second or fourth — the most
+ * useful chord in ambient music, because it has no major-or-minor to commit
+ * to — and pick up a seventh once richness asks for more than three notes.
+ */
+export function chordStack(extensions: Extensions, richness: number): number[] {
   const r = clamp01(richness)
-  const stack = [0, 2, 4] // triad
-  if (r > 0.25) stack.push(6) // seventh
-  if (r > 0.62) stack.push(8) // ninth
-  if (r > 0.88) stack.push(10) // eleventh / thirteenth region
-  return stack.map((s) => rootMidi + degreeToSemitone(mode, degree + s))
+  switch (extensions) {
+    case 'triad': return [0, 2, 4]
+    case 'seventh': return [0, 2, 4, 6]
+    case 'ninth': return [0, 2, 4, 6, 8]
+    case 'eleventh': return [0, 2, 4, 6, 8, 10]
+    case 'sus2': return r > 0.25 ? [0, 1, 4, 6] : [0, 1, 4]
+    case 'sus4': return r > 0.25 ? [0, 3, 4, 6] : [0, 3, 4]
+    case 'auto': {
+      const stack = [0, 2, 4] // triad
+      if (r > 0.25) stack.push(6) // seventh
+      if (r > 0.62) stack.push(8) // ninth
+      if (r > 0.88) stack.push(10) // eleventh / thirteenth region
+      return stack
+    }
+  }
 }
 
 /**

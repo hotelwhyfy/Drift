@@ -153,6 +153,7 @@ export function rackFor(reading: Reading): SlotDesc[] {
       expression: choice.expression,
       follow: choice.follow,
       lanes: lanesFor(choice, reading, rng()),
+      knobs: {},
     }
   })
 }

@@ -34,8 +34,10 @@ export class Bass {
   private velocity = 0
   private glideTarget = 55
   private glideCoef: number
+  private sample = 0
+  private releaseAt = Infinity
 
-  constructor(sampleRate: number) {
+  constructor(private readonly sampleRate: number) {
     this.phasor = new Phasor(sampleRate)
     this.triPhasor = new Phasor(sampleRate)
     this.amp = new Adsr(sampleRate)
@@ -48,7 +50,12 @@ export class Bass {
     this.params = p
   }
 
-  noteOn(midi: number, velocity: number, referenceHz: number): void {
+  /**
+   * Same signature as every other voice. This once took the reference pitch
+   * third, where every caller passes the note's length — so the sub tuned
+   * itself to A = 3 Hz and played, for a long time, well below hearing.
+   */
+  noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {
     this.glideTarget = midiToHz(midi, referenceHz)
     // A short portamento between roots is the classic lo-fi bass gesture and
     // also hides the click a hard pitch jump would make on a sustaining sine.
@@ -56,6 +63,7 @@ export class Bass {
     this.velocity = velocity
     this.amp.set(0.012, this.params.decay, 0.55, this.params.release)
     this.amp.gate()
+    this.releaseAt = this.sample + durationSec * this.sampleRate
   }
 
   noteOff(): void {
@@ -63,6 +71,11 @@ export class Bass {
   }
 
   process(out: Stereo): void {
+    this.sample++
+    if (this.sample >= this.releaseAt) {
+      this.amp.release()
+      this.releaseAt = Infinity
+    }
     if (!this.amp.active) return
     this.hz = this.glideTarget + this.glideCoef * (this.hz - this.glideTarget)
     this.phasor.setHz(this.hz)

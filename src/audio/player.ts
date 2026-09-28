@@ -3,6 +3,8 @@ import type { SlotDesc } from '../engine/rack.ts'
 import type { EngineSnapshot } from '../engine/engine.ts'
 import type { ToWorker, FromWorker } from './messages.ts'
 import { encodeWav } from './wav.ts'
+import type { Song } from '../song/song.ts'
+import { DEFAULT_SONG } from '../song/song.ts'
 
 /**
  * How far ahead of the speakers audio is rendered.
@@ -20,6 +22,9 @@ const MIN_LOOKAHEAD = 0.36
 const MAX_LOOKAHEAD = 1.8
 /** Length of each rendered chunk. */
 const CHUNK = 0.12
+const VOLUME = 0.9
+/** A song that has stopped is let ring for at most this long. */
+const TAIL_SECONDS = 10
 
 export interface PlayerEvents {
   onSnapshot?: (s: EngineSnapshot) => void
@@ -55,6 +60,18 @@ export class Player {
   private sources = new Set<AudioBufferSourceNode>()
   private captureResolve: ((blob: Blob) => void) | null = null
   private captureId = 0
+  private song: Song = DEFAULT_SONG
+  /** Bumped on every seek; audio from an older epoch is dropped. */
+  private epoch = 0
+  /** The next chunk is the first after a seek: fade it in rather than count an underrun. */
+  private freshStart = false
+  /**
+   * Snapshots wait here until the audio they describe is actually playing. The
+   * engine renders a lookahead in advance, so a snapshot shown on arrival
+   * puts the playhead a third of a second ahead of the speakers.
+   */
+  private heard: { at: number; snapshot: EngineSnapshot }[] = []
+  private endedAt: number | null = null
 
   constructor(macros: Macros, seed: number, private readonly events: PlayerEvents = {}) {
     this.macros = { ...macros }
@@ -97,7 +114,7 @@ export class Player {
     // 'playback' adds output latency on top of the queue, which the dials feel.
     const ctx = new AudioContext({ latencyHint: 'interactive' })
     const gain = ctx.createGain()
-    gain.gain.value = 0.9
+    gain.gain.value = VOLUME
     const analyser = ctx.createAnalyser()
     analyser.fftSize = 2048
     analyser.smoothingTimeConstant = 0.82
@@ -115,6 +132,7 @@ export class Player {
     worker.onmessage = (e: MessageEvent<FromWorker>) => this.onWorkerMessage(e.data)
     this.send(worker, { type: 'init', sampleRate: ctx.sampleRate, macros: this.macros, seed: this.seed })
     if (this.slots.length > 0) this.send(worker, { type: 'rack', slots: this.slots })
+    this.send(worker, { type: 'song', song: this.song })
     this.worker = worker
     return ctx
   }
@@ -126,9 +144,20 @@ export class Player {
   private onWorkerMessage(msg: FromWorker): void {
     switch (msg.type) {
       case 'chunk': {
+        // Rendered for a position that has since been left behind.
+        if (msg.epoch !== this.epoch) return
         this.inflight--
         if (!this.playing || !this.ctx || !this.gain) return
         const ctx = this.ctx
+        if (this.freshStart) {
+          // First audio after a seek or a start: begin just ahead of now, and
+          // fade in over it so the jump does not click.
+          this.freshStart = false
+          this.scheduledUntil = ctx.currentTime + 0.03
+          this.gain.gain.cancelScheduledValues(ctx.currentTime)
+          this.gain.gain.setValueAtTime(0, this.scheduledUntil)
+          this.gain.gain.linearRampToValueAtTime(VOLUME, this.scheduledUntil + 0.04)
+        }
         const buffer = ctx.createBuffer(2, msg.left.length, ctx.sampleRate)
         buffer.copyToChannel(msg.left, 0)
         buffer.copyToChannel(msg.right, 1)
@@ -151,7 +180,7 @@ export class Player {
         this.scheduledUntil += buffer.duration
         this.sources.add(source)
         source.onended = () => this.sources.delete(source)
-        this.events.onSnapshot?.(msg.snapshot)
+        this.heard.push({ at: this.scheduledUntil, snapshot: msg.snapshot })
         break
       }
       case 'captureProgress':
@@ -167,7 +196,28 @@ export class Player {
     }
   }
 
+  /** Hand the interface the newest snapshot whose audio has now been heard. */
+  private release(): void {
+    if (!this.ctx) return
+    const now = this.ctx.currentTime
+    let latest: EngineSnapshot | null = null
+    while (this.heard.length > 0 && this.heard[0].at <= now) {
+      const next = this.heard.shift()
+      if (next) latest = next.snapshot
+    }
+    if (!latest) return
+    this.events.onSnapshot?.(latest)
+    // A song that stops is let ring out, then the transport stops by itself.
+    if (latest.ended) {
+      this.endedAt ??= now
+      if (latest.rms < 0.0008 || now - this.endedAt > TAIL_SECONDS) this.stop()
+    } else {
+      this.endedAt = null
+    }
+  }
+
   private pump = (): void => {
+    this.release()
     if (!this.playing || !this.ctx || !this.worker) return
     const frames = Math.floor(CHUNK * this.ctx.sampleRate)
     // Ask for enough chunks to refill the lookahead, counting the ones already
@@ -176,16 +226,24 @@ export class Player {
       this.scheduledUntil - this.ctx.currentTime + this.inflight * CHUNK < this.lookahead
     ) {
       this.inflight++
-      this.send(this.worker, { type: 'render', frames, id: this.nextId++ })
+      this.send(this.worker, { type: 'render', frames, id: this.nextId++, epoch: this.epoch })
     }
   }
 
-  async play(): Promise<void> {
+  /**
+   * Start playback. Given a bar, starts from there — from the top of it, with
+   * the room already sounding. Without one, carries on from wherever the
+   * engine is, which is what an endless stream wants.
+   */
+  async play(fromBar?: number): Promise<void> {
     const ctx = this.ensureContext()
     if (ctx.state === 'suspended') await ctx.resume()
     if (this.playing) return
     this.playing = true
+    if (fromBar !== undefined) this.jump(fromBar)
     this.scheduledUntil = ctx.currentTime + 0.12
+    this.freshStart = true
+    this.endedAt = null
     this.pump()
     this.timer = window.setInterval(this.pump, 40)
     this.events.onStateChange?.(true)
@@ -210,11 +268,51 @@ export class Player {
           try { s.stop() } catch { /* already ended */ }
         })
         this.sources.clear()
-        if (this.gain && this.ctx) this.gain.gain.setValueAtTime(0.9, this.ctx.currentTime)
+        if (this.gain && this.ctx) this.gain.gain.setValueAtTime(VOLUME, this.ctx.currentTime)
       }, 140)
     }
     this.inflight = 0
+    this.heard = []
+    this.endedAt = null
     this.events.onStateChange?.(false)
+  }
+
+  /** Move the engine, and forget everything rendered for the old position. */
+  private jump(bar: number): void {
+    this.epoch++
+    this.inflight = 0
+    this.heard = []
+    this.endedAt = null
+    if (this.worker) this.send(this.worker, { type: 'seek', bar, epoch: this.epoch })
+  }
+
+  /**
+   * Jump to a bar. While playing, what is queued is faded out over 30 ms and
+   * dropped, and the new position fades in as soon as it arrives; stopped,
+   * the engine simply waits there.
+   */
+  seek(bar: number): void {
+    this.ensureContext()
+    this.jump(bar)
+    if (!this.playing || !this.ctx || !this.gain) return
+    const now = this.ctx.currentTime
+    this.gain.gain.cancelScheduledValues(now)
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now)
+    this.gain.gain.linearRampToValueAtTime(0, now + 0.03)
+    const old = [...this.sources]
+    this.sources.clear()
+    window.setTimeout(() => {
+      old.forEach((s) => {
+        try { s.stop() } catch { /* already ended */ }
+      })
+    }, 40)
+    this.freshStart = true
+    this.pump()
+  }
+
+  setSong(song: Song): void {
+    this.song = song
+    if (this.worker) this.send(this.worker, { type: 'song', song })
   }
 
   setMacros(m: Macros): void {
@@ -236,8 +334,11 @@ export class Player {
     return this.seed
   }
 
-  /** Renders a fresh piece at the current settings, faster than real time. */
-  capture(seconds: number): Promise<Blob> {
+  /**
+   * Renders the piece from the top at the current settings, faster than real
+   * time: the song once through plus its tail, or a fixed number of seconds.
+   */
+  capture(mode: 'song' | 'minutes', seconds = 0): Promise<Blob> {
     const ctx = this.ensureContext()
     void ctx
     return new Promise((resolve) => {
@@ -245,8 +346,8 @@ export class Player {
       this.captureId = this.nextId++
       if (this.worker) {
         this.send(this.worker, {
-          type: 'capture', seconds, macros: this.macros, seed: this.seed,
-          slots: this.slots, id: this.captureId,
+          type: 'capture', mode, seconds, macros: this.macros, seed: this.seed,
+          slots: this.slots, song: this.song, id: this.captureId,
         })
       }
     })
