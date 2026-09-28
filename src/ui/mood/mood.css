@@ -1,0 +1,246 @@
+/*
+ * The mood version. Quieter than the prototype in every respect: one question
+ * on an empty screen, then one slowly moving image and almost nothing else.
+ * The full instrument is still there, but it is put away until asked for.
+ */
+
+/* ── The question ───────────────────────────────────────────────────────── */
+.opening {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.opening-inner {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  /* Arrives rather than appears. */
+  animation: settle 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
+}
+
+.opening-question {
+  margin: 0;
+  font-size: clamp(21px, 4.4vw, 29px);
+  font-weight: 350;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.opening-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #ffffff1c;
+  transition: border-color 300ms ease;
+}
+
+.opening-field:focus-within { border-bottom-color: var(--accent); }
+
+.opening-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  padding: 10px 2px;
+}
+
+.opening-field input::placeholder { color: var(--ink-faint); }
+
+.opening-go {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 7px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  transition: color 200ms ease, opacity 200ms ease;
+}
+
+.opening-go:disabled { opacity: 0.3; cursor: default; }
+.opening-go:not(:disabled) { color: var(--accent); }
+.opening-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.opening-go svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.opening-offers { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.opening-offers button {
+  appearance: none;
+  border: none;
+  background: #ffffff09;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.opening-offers button:hover { background: #ffffff16; color: var(--ink); }
+.opening-offers button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── While it plays ─────────────────────────────────────────────────────── */
+.mood {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  position: relative;
+}
+
+.listening {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mood-centre {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  width: min(520px, 100%);
+  animation: settle 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.mood-echo {
+  margin: 0;
+  font-size: clamp(17px, 3.4vw, 22px);
+  font-weight: 350;
+  line-height: 1.4;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.mood-state {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.mood-dot { width: 2px; height: 2px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+
+.mood-play {
+  appearance: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid #ffffff18;
+  background: none;
+  color: var(--ink-dim);
+  font-size: 11px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: border-color 260ms ease, color 260ms ease;
+}
+
+.mood-play:hover { border-color: var(--accent); color: var(--ink); }
+.mood-play:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.mood-journey { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+.mood-journey-bar {
+  width: 128px;
+  height: 1px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+
+.mood-journey-bar span {
+  display: block;
+  height: 100%;
+  transition: width 1.8s linear;
+}
+
+.mood-journey-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  opacity: 0.7;
+}
+
+.mood-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  padding-top: 20px;
+}
+
+.mood-actions button {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 11.5px;
+  padding: 7px 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.mood-actions button:hover { color: var(--ink); background: #ffffff0a; }
+.mood-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── The desk, when asked for ───────────────────────────────────────────── */
+.desk {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 0 0;
+  animation: settle 500ms ease both;
+}
+
+.desk-dials { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+
+/* Once the desk is open the centre stops claiming the whole screen. */
+.mood.desk-open { justify-content: flex-start; padding-top: 30px; }
+.mood.desk-open .mood-centre { flex: none; gap: 14px; padding-bottom: 4px; }
+.mood.desk-open .mood-echo { font-size: 16px; }
+
+@media (max-width: 620px) {
+  .desk-dials { grid-template-columns: repeat(3, 1fr); gap: 10px 4px; }
+}

@@ -6,9 +6,16 @@ instruments that are controlled by describing them rather than by setting them.
 Nothing is sampled and nothing is pre-rendered: every sound is synthesised from
 scratch, forever, and the same seed and settings reproduce it exactly.
 
+There are two front ends over one engine:
+
+| | |
+|---|---|
+| `/` | the instrument — six dials, a rack, automation you draw |
+| `/mood.html` | one question, then it plays. See [src/mood/README.md](src/mood/README.md) |
+
 ```
 npm install
-npm run dev        # http://localhost:5179
+npm run dev        # http://localhost:5179  and  /mood.html
 npm test           # 106 tests
 npm run audition   # render every scene to out/*.wav and print the levels
 npm run build
