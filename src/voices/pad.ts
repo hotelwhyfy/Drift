@@ -57,6 +57,8 @@ class PadVoice {
   private wander: SmoothRandom
   private breath: SmoothRandom
   private hz = 220
+  /** Cutoff scaling for the note's pitch; fixed for the life of a note. */
+  private track = 1
   private pan = 0
   private gainL = new Float64Array(UNISON)
   private gainR = new Float64Array(UNISON)
@@ -88,6 +90,8 @@ class PadVoice {
   start(midi: number, velocity: number, p: PadParams, referenceHz: number, rng: Rng): void {
     this.midi = midi
     this.hz = midiToHz(midi, referenceHz)
+    // Track the note so high chords are not dull and low ones are not harsh.
+    this.track = Math.pow(this.hz / 220, 0.35)
     const cents = lerp(2, 26, clamp01(p.detune))
     for (let i = 0; i < UNISON; i++) {
       this.detuneRatios[i] = Math.pow(2, (SPREAD[i] * cents) / 1200)
@@ -135,13 +139,11 @@ class PadVoice {
       l += s * this.gainL[i]
       r += s * this.gainR[i]
     }
-    // Track the note so high chords are not dull and low ones are not harsh.
-    const track = Math.pow(this.hz / 220, 0.35)
     const wobble = 1 + this.wander.process() * p.motion * 0.7
-    const cut = p.cutoff * track * wobble
+    const cut = p.cutoff * this.track * wobble
     const q = 0.5 + p.resonance * 3.5
     this.filterL.set(cut, q)
-    this.filterR.set(cut, q)
+    this.filterR.copyCoefficients(this.filterL)
     const a = this.amp.process() * this.velocity / Math.sqrt(UNISON)
     out[0] += this.filterL.lowpass(l) * a
     out[1] += this.filterR.lowpass(r) * a

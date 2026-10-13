@@ -11,12 +11,23 @@ export class Svf {
   private a1 = 0
   private a2 = 0
   private a3 = 0
+  /** The arguments the coefficients were last worked out for. */
+  private lastCutoff = NaN
+  private lastQ = NaN
 
   constructor(private readonly sampleRate: number) {
     this.set(1000, 0.7)
   }
 
+  /**
+   * Many callers set the filter every sample with a cutoff that only changes
+   * at control rate. Recomputing identical coefficients costs a tan() each
+   * time and changes nothing, so it is skipped — the output is bit-identical.
+   */
   set(cutoffHz: number, q: number): void {
+    if (cutoffHz === this.lastCutoff && q === this.lastQ) return
+    this.lastCutoff = cutoffHz
+    this.lastQ = q
     const nyquist = this.sampleRate * 0.5
     const fc = cutoffHz < 10 ? 10 : cutoffHz > nyquist * 0.98 ? nyquist * 0.98 : cutoffHz
     this.g = Math.tan((Math.PI * fc) / this.sampleRate)
@@ -24,6 +35,21 @@ export class Svf {
     this.a1 = 1 / (1 + this.g * (this.g + this.k))
     this.a2 = this.g * this.a1
     this.a3 = this.g * this.a2
+  }
+
+  /**
+   * Takes another filter's coefficients without recomputing them: the
+   * stereo pair in a voice is always set identically, but each channel must
+   * keep its own state.
+   */
+  copyCoefficients(from: Svf): void {
+    this.lastCutoff = from.lastCutoff
+    this.lastQ = from.lastQ
+    this.g = from.g
+    this.k = from.k
+    this.a1 = from.a1
+    this.a2 = from.a2
+    this.a3 = from.a3
   }
 
   lowpass(x: number): number {

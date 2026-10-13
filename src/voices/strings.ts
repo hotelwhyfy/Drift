@@ -44,6 +44,8 @@ class StringVoice {
   private filter: Svf
   private drift: SmoothRandom
   private hz = 220
+  /** Cutoff scaling for the note's pitch; fixed for the life of a note. */
+  private track = 1
   private age = 0
   private length = 1
   private velocity = 0
@@ -70,6 +72,7 @@ class StringVoice {
   start(midi: number, velocity: number, seconds: number, p: StringsParams, referenceHz: number, rng: Rng): void {
     this.midi = midi
     this.hz = midiToHz(midi, referenceHz)
+    this.track = Math.pow(this.hz / 330, 0.3)
     this.velocity = velocity
     this.age = 0
     this.length = Math.max(0.5, seconds) * this.sampleRate
@@ -105,7 +108,7 @@ class StringVoice {
       s += sawFrom(ph.step(), ph.increment)
     }
     s /= UNISON
-    this.filter.set(p.brightness * Math.pow(this.hz / 330, 0.3), 0.6)
+    this.filter.set(p.brightness * this.track, 0.6)
     s = this.filter.lowpass(s)
     // The bow: an optional crescendo across the note's length.
     const through = clamp01(this.age / this.length)
