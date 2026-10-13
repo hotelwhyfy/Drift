@@ -426,9 +426,9 @@ export function Timeline({
               className="tl-add"
               value=""
               onChange={(e) => addSlotLane(e.target.value)}
-              aria-label="Add an instrument lane to the timeline"
+              aria-label="Add an automation lane to the timeline"
             >
-              <option value="">+ instrument lane</option>
+              <option value="">+ automation lane</option>
               {slots.map((slot) => {
                 const def = instrumentById(slot.defId)
                 if (!def) return null

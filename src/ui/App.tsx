@@ -24,6 +24,7 @@ import { songSeconds } from '../song/songSeconds.ts'
 import { sectionAt } from '../song/sectionAt.ts'
 import { composeAt } from '../song/composeAt.ts'
 import { HarmonyRow } from './HarmonyRow.tsx'
+import { generateDrift } from '../generate/generateDrift.ts'
 import { NOTE_NAMES } from '../core/theory.ts'
 import { MACRO_COLOURS } from './laneColours.ts'
 
@@ -148,7 +149,10 @@ export function App() {
   /** Where playback starts from, and where the playhead rests when stopped. */
   const [cursor, setCursor] = useState(0)
   const [projectName, setProjectName] = useState(initial.projectName)
-  const [notice, setNotice] = useState<string | null>(null)
+  /** The toast, and what its Undo puts back if it offers one. One state, so a
+   *  later notice can never show an earlier one's Undo. */
+  const [notice, setNotice] = useState<{ text: string, undo: Session | null } | null>(null)
+  const say = useCallback((text: string, undo: Session | null = null) => setNotice({ text, undo }), [])
   const playerRef = useRef<Player | null>(null)
 
   const playhead = playing && snapshot ? snapshot.bar + snapshot.barPhase : cursor
@@ -287,6 +291,41 @@ export function App() {
     applySeed(randomSeedName())
   }, [applySeed])
 
+  /** Replaces everything at once: what opening a file, generating and undoing share. */
+  const applySession = useCallback((session: Session) => {
+    setMacros(session.macros)
+    setSlots(session.slots)
+    setSong(session.song)
+    setCursor(0)
+    setSeedName(session.seedName)
+    setProjectName(session.projectName)
+    if (player.isPlaying) {
+      setSnapshot(null)
+      player.seek(0)
+    }
+    player.reseed(deriveSeed(session.seedName))
+  }, [player])
+
+  /**
+   * A brand-new drift: new seed, dials, rack and song. It replaces the work on
+   * screen, which the autosave would then overwrite, so the notice offers it
+   * back rather than asking first — a confirmation on every press would make
+   * generating several in a row a chore.
+   */
+  const generate = useCallback(() => {
+    const previous: Session = { macros, seedName, slots, song, projectName }
+    const name = randomSeedName()
+    applySession({ ...generateDrift(name), seedName: name, projectName: name })
+    say(`generated ${name}`, previous)
+  }, [macros, seedName, slots, song, projectName, applySession, say])
+
+  const undo = useCallback(() => {
+    const previous = notice?.undo
+    if (!previous) return
+    applySession(previous)
+    say(`back to ${previous.projectName}`)
+  }, [notice, applySession, say])
+
   const capture = useCallback(async () => {
     setCaptureProgress(0)
     const blob = captureLength === 'song'
@@ -315,31 +354,31 @@ export function App() {
       if (!result) return
       // The name the user typed in the dialog becomes the project's name.
       setProjectName(result.name)
-      setNotice(result.fellBack ? `downloaded ${result.name}` : `saved ${result.name}`)
+      say(result.fellBack ? `downloaded ${result.name}` : `saved ${result.name}`)
     } catch (error) {
       if (isCancellation(error)) return
-      setNotice(error instanceof Error ? error.message : 'Could not save.')
+      say(error instanceof Error ? error.message : 'Could not save.')
     }
   }, [projectName, macros, seedName, slots, song])
 
   const loadProject = useCallback((text: string, filename?: string) => {
     try {
       const { project, warnings } = readProject(text)
-      setMacros(project.macros)
-      setSlots(project.slots)
-      setSong(project.song)
-      setCursor(0)
-      setSeedName(project.seedName)
       // The filename wins over the name inside the file: it is what the user
       // last chose to call it, and what they will look for next time.
       const name = filename ? stripExtension(filename) : project.name
-      setProjectName(name)
-      player.reseed(deriveSeed(project.seedName))
-      setNotice(warnings.length > 0 ? warnings.join(' ') : `opened ${name}`)
+      applySession({
+        macros: project.macros,
+        seedName: project.seedName,
+        slots: project.slots,
+        song: project.song,
+        projectName: name,
+      })
+      say(warnings.length > 0 ? warnings.join(' ') : `opened ${name}`)
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not open that file.')
+      say(error instanceof Error ? error.message : 'Could not open that file.')
     }
-  }, [player])
+  }, [applySession])
 
   const openFile = useCallback(async (file: File | null | undefined) => {
     if (!file) return
@@ -352,7 +391,7 @@ export function App() {
       if (opened) loadProject(opened.text, opened.name)
     } catch (error) {
       if (isCancellation(error)) return
-      setNotice(error instanceof Error ? error.message : 'Could not open that file.')
+      say(error instanceof Error ? error.message : 'Could not open that file.')
     }
   }, [loadProject])
 
@@ -371,10 +410,11 @@ export function App() {
     }
   }, [openFile])
 
-  // Notices clear themselves; they are confirmations, not state.
+  // Notices clear themselves; they are confirmations, not state. One that
+  // offers Undo stays long enough to reach for it.
   useEffect(() => {
     if (!notice) return
-    const timer = window.setTimeout(() => setNotice(null), 4500)
+    const timer = window.setTimeout(() => setNotice(null), notice.undo ? 8000 : 4500)
     return () => window.clearTimeout(timer)
   }, [notice])
 
@@ -420,6 +460,11 @@ export function App() {
           <span className="dot" />
           <span className="bar-count">bar {Math.floor(playhead) + 1} / {song.lengthBars}</span>
           <div className="file-actions">
+            <button type="button" onClick={generate} title="Generate a new drift" aria-label="Generate a new drift">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M7 2.2 8.1 5.6 11.5 6.7 8.1 7.8 7 11.2 5.9 7.8 2.5 6.7 5.9 5.6Z M12.4 10.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
+              </svg>
+            </button>
             <button type="button" onClick={() => void openProject()} title="Open project (⌘O)" aria-label="Open project">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M1.5 12.5V4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1Z" />
@@ -562,7 +607,12 @@ export function App() {
       </footer>
       {/* Floats over the page rather than taking a row in it, so a
           confirmation never shifts the controls under the pointer. */}
-      {notice && <div className="toast" role="status">{notice}</div>}
+      {notice && (
+        <div className="toast" role="status">
+          {notice.text}
+          {notice.undo && <button type="button" className="toast-action" onClick={undo}>undo</button>}
+        </div>
+      )}
     </main>
   )
 }
