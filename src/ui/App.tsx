@@ -315,7 +315,7 @@ export function App() {
       if (!result) return
       // The name the user typed in the dialog becomes the project's name.
       setProjectName(result.name)
-      setNotice(`saved ${result.name}`)
+      setNotice(result.fellBack ? `downloaded ${result.name}` : `saved ${result.name}`)
     } catch (error) {
       if (isCancellation(error)) return
       setNotice(error instanceof Error ? error.message : 'Could not save.')
@@ -433,7 +433,6 @@ export function App() {
           </div>
         </div>
       </header>
-      {notice && <div className="notice" role="status">{notice}</div>}
 
       <Visualizer player={player} playing={playing} accent={accent} />
 
@@ -561,6 +560,9 @@ export function App() {
           </button>
         </div>
       </footer>
+      {/* Floats over the page rather than taking a row in it, so a
+          confirmation never shifts the controls under the pointer. */}
+      {notice && <div className="toast" role="status">{notice}</div>}
     </main>
   )
 }
