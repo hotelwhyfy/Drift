@@ -2,7 +2,6 @@ import type { Macros } from '../macros/macros.ts'
 import type { SlotDesc } from '../engine/rack.ts'
 import type { EngineSnapshot } from '../engine/engine.ts'
 import type { ToWorker, FromWorker } from './messages.ts'
-import { encodeWav } from './wav.ts'
 import type { Song } from '../song/song.ts'
 import { DEFAULT_SONG } from '../song/song.ts'
 
@@ -58,8 +57,8 @@ export class Player {
   private slots: SlotDesc[] = []
   private seed: number
   private sources = new Set<AudioBufferSourceNode>()
-  private captureResolve: ((blob: Blob) => void) | null = null
-  private captureId = 0
+  /** The worker rendering the current capture, if one is running. */
+  private captureWorker: Worker | null = null
   private song: Song = DEFAULT_SONG
   /** Bumped on every seek; audio from an older epoch is dropped. */
   private epoch = 0
@@ -183,16 +182,10 @@ export class Player {
         this.heard.push({ at: this.scheduledUntil, snapshot: msg.snapshot })
         break
       }
+      // Captures answer on their own worker, not this one.
       case 'captureProgress':
-        if (msg.id === this.captureId) this.events.onCaptureProgress?.(msg.progress)
+      case 'capture':
         break
-      case 'capture': {
-        if (msg.id !== this.captureId || !this.captureResolve) return
-        const wav = encodeWav(msg.left, msg.right, msg.sampleRate)
-        this.captureResolve(new Blob([wav], { type: 'audio/wav' }))
-        this.captureResolve = null
-        break
-      }
     }
   }
 
@@ -338,18 +331,55 @@ export class Player {
    * Renders the piece from the top at the current settings, faster than real
    * time: the song once through plus its tail, or a fixed number of seconds.
    */
-  capture(mode: 'song' | 'minutes', seconds = 0): Promise<Blob> {
-    const ctx = this.ensureContext()
-    void ctx
-    return new Promise((resolve) => {
-      this.captureResolve = resolve
-      this.captureId = this.nextId++
-      if (this.worker) {
-        this.send(this.worker, {
-          type: 'capture', mode, seconds, macros: this.macros, seed: this.seed,
-          slots: this.slots, song: this.song, id: this.captureId,
-        })
+  capture(
+    mode: 'song' | 'minutes',
+    seconds: number,
+    write: (bytes: Uint8Array<ArrayBuffer>) => Promise<void>,
+  ): Promise<void> {
+    // The context's rate, so the file is rendered at the rate it was heard at.
+    const sampleRate = this.ensureContext().sampleRate
+    // A worker of its own: a capture is minutes of solid rendering, and on
+    // the playback worker it would starve the queue for all of them. On its
+    // own it runs on another core, and playback carries on.
+    this.captureWorker?.terminate()
+    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    this.captureWorker = worker
+    const id = this.nextId++
+    const finish = (): void => {
+      worker.terminate()
+      if (this.captureWorker === worker) this.captureWorker = null
+    }
+    return new Promise((resolve, reject) => {
+      // Pieces are written strictly in order, each after the last has landed.
+      // Rendering runs ahead meanwhile; a disk is far faster than the render,
+      // so the queue of pieces in hand stays at one or two.
+      let written: Promise<void> = Promise.resolve()
+      let failed = false
+      const fail = (error: unknown): void => {
+        if (failed) return
+        failed = true
+        finish()
+        reject(error instanceof Error ? error : new Error('The capture failed.'))
       }
+      worker.onmessage = (e: MessageEvent<FromWorker>) => {
+        const msg = e.data
+        if (failed || msg.id !== id) return
+        if (msg.type === 'captureChunk') {
+          const bytes = msg.bytes
+          written = written.then(() => write(bytes))
+          written.catch(fail)
+        } else if (msg.type === 'captureProgress') {
+          this.events.onCaptureProgress?.(msg.progress)
+        } else if (msg.type === 'capture') {
+          finish()
+          written.then(resolve, fail)
+        }
+      }
+      worker.onerror = (e) => fail(new Error(e.message || 'The capture failed.'))
+      this.send(worker, {
+        type: 'capture', id, mode, seconds, sampleRate, macros: this.macros, seed: this.seed,
+        slots: this.slots, song: this.song,
+      })
     })
   }
 
@@ -363,6 +393,8 @@ export class Player {
     this.stop()
     this.worker?.terminate()
     this.worker = null
+    this.captureWorker?.terminate()
+    this.captureWorker = null
     void this.ctx?.close()
     this.ctx = null
   }

@@ -323,6 +323,34 @@ button { font: inherit; }
 }
 
 .lengths button.on { background: #ffffff14; color: var(--ink); }
+
+/* A typed length, sitting in the row as one more choice. */
+.length-custom {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  padding: 0 9px 0 4px;
+  border-radius: 999px;
+  cursor: text;
+}
+
+.length-custom.on { background: #ffffff14; color: var(--ink); }
+
+.length-custom input {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 4ch;
+  padding: 5px 1px 5px 4px;
+  text-align: right;
+  outline: none;
+}
+
+.length-custom input::placeholder { color: var(--ink-faint); }
+.length-custom:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 .lengths button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .capture-go {

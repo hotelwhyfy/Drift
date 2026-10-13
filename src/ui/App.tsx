@@ -12,7 +12,8 @@ import { DEFAULT_RACK } from '../engine/engine.ts'
 import { instrumentById } from '../instruments/registry.ts'
 import { NEUTRAL } from '../fuzzy/expression.ts'
 import { readProject, writeProject, projectFilename } from '../project/project.ts'
-import { saveTextFile, openTextFile, isCancellation, stripExtension } from '../project/filePicker.ts'
+import { saveTextFile, openTextFile, openWavSink, isCancellation, stripExtension } from '../project/filePicker.ts'
+import type { FileSink } from '../project/filePicker.ts'
 import { deriveSeed } from '../core/rng.ts'
 import type { EngineSnapshot } from '../engine/engine.ts'
 import { Timeline } from './Timeline.tsx'
@@ -29,6 +30,20 @@ import { NOTE_NAMES } from '../core/theory.ts'
 import { MACRO_COLOURS } from './laneColours.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]
+/**
+ * A capture streams to disk, so memory does not limit it; the WAV format does.
+ * Its sizes are 32-bit, which at 48 kHz stereo 16-bit is a little over six
+ * hours.
+ */
+const MAX_CAPTURE_MINUTES = 360
+const MIN_CAPTURE_MINUTES = 0.25
+
+/** A typed length in minutes, or null when it is not one. */
+function parseMinutes(text: string): number | null {
+  const n = Number(text.trim())
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.min(MAX_CAPTURE_MINUTES, Math.max(MIN_CAPTURE_MINUTES, Math.round(n * 4) / 4))
+}
 const STORAGE_KEY = 'drift.state.v1'
 
 /** Words for the seed, so a world can be remembered and typed back in. */
@@ -145,6 +160,8 @@ export function App() {
   const [captureProgress, setCaptureProgress] = useState<number | null>(null)
   /** Minutes, or 'song' for the song once through. */
   const [captureLength, setCaptureLength] = useState<number | 'song'>('song')
+  /** What is in the minutes field while it is being typed in. */
+  const [minutesDraft, setMinutesDraft] = useState('')
   const [song, setSong] = useState<Song>(initial.song)
   /** Where playback starts from, and where the playhead rests when stopped. */
   const [cursor, setCursor] = useState(0)
@@ -327,22 +344,32 @@ export function App() {
   }, [notice, applySession, say])
 
   const capture = useCallback(async () => {
-    setCaptureProgress(0)
-    const blob = captureLength === 'song'
-      ? await player.capture('song')
-      : await player.capture('minutes', captureLength * 60)
-    setCaptureProgress(null)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = captureLength === 'song'
+    const filename = captureLength === 'song'
       ? `drift-${projectName !== 'untitled' ? projectName : seedName}.wav`
       : `drift-${seedName}-${captureLength}min.wav`
-    a.click()
-    // Revoked on a delay: revoking immediately can cancel the download in
-    // some browsers before it has read the blob.
-    setTimeout(() => URL.revokeObjectURL(url), 30_000)
-  }, [player, captureLength, seedName, projectName])
+    // Where it goes is decided first, before any rendering: the file is
+    // written as the audio is made, not collected and saved at the end.
+    let sink: FileSink
+    try {
+      sink = await openWavSink(filename)
+    } catch (error) {
+      if (!isCancellation(error)) say(error instanceof Error ? error.message : 'Could not start the export.')
+      return
+    }
+    setCaptureProgress(0)
+    try {
+      await (captureLength === 'song'
+        ? player.capture('song', 0, sink.write)
+        : player.capture('minutes', captureLength * 60, sink.write))
+      await sink.close()
+      say(sink.inMemory ? `downloaded ${sink.name}` : `exported ${sink.name}`)
+    } catch (error) {
+      await sink.abort().catch(() => {})
+      say(error instanceof Error ? error.message : 'The capture failed.')
+    } finally {
+      setCaptureProgress(null)
+    }
+  }, [player, captureLength, seedName, projectName, say])
 
   const saveProject = useCallback(async () => {
     try {
@@ -587,11 +614,38 @@ export function App() {
                 key={m}
                 type="button"
                 className={captureLength === m ? 'on' : ''}
-                onClick={() => setCaptureLength(m)}
+                onClick={() => { setCaptureLength(m); setMinutesDraft('') }}
               >
                 {m}m
               </button>
             ))}
+            <label
+              className={`length-custom ${typeof captureLength === 'number' && !CAPTURE_LENGTHS.includes(captureLength) ? 'on' : ''}`}
+              title={`Any length up to ${MAX_CAPTURE_MINUTES} minutes`}
+            >
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="…"
+                aria-label="Capture length in minutes"
+                value={minutesDraft}
+                onChange={(e) => {
+                  setMinutesDraft(e.target.value)
+                  const m = parseMinutes(e.target.value)
+                  if (m !== null) setCaptureLength(m)
+                }}
+                onBlur={() => {
+                  // Show what will actually be captured, once clamped and rounded.
+                  const m = parseMinutes(minutesDraft)
+                  setMinutesDraft(m === null || CAPTURE_LENGTHS.includes(m) ? '' : String(m))
+                  if (m !== null) setCaptureLength(m)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                }}
+              />
+              m
+            </label>
           </div>
           <button
             className="capture-go"

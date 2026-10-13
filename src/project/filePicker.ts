@@ -11,6 +11,9 @@
  * In development both go to the dev server first, which shows the native macOS
  * dialog itself (scripts/fileDialogs.ts). That is the only path that works in
  * Safari and in VS Code's built-in browser.
+ *
+ * Exports are written as they render rather than collected first (`FileSink`),
+ * so an hour of audio never has to fit in the tab's memory.
  */
 
 interface PickerType {
@@ -19,8 +22,9 @@ interface PickerType {
 }
 
 interface WritableLike {
-  write(data: string): Promise<void>
+  write(data: string | Uint8Array<ArrayBuffer>): Promise<void>
   close(): Promise<void>
+  abort(): Promise<void>
 }
 
 interface FileHandleLike {
@@ -42,6 +46,11 @@ interface OpenOptions {
 const PROJECT_TYPE: PickerType = {
   description: 'drift project',
   accept: { 'application/json': ['.json'] },
+}
+
+const WAV_TYPE: PickerType = {
+  description: 'WAV audio',
+  accept: { 'audio/wav': ['.wav'] },
 }
 
 /**
@@ -117,23 +126,37 @@ function isDevServerFile(value: unknown): value is DevServerFile {
 }
 
 /**
- * Asks the dev server to run the dialog. Null when there is no dev server to
- * ask (a production build, or not macOS), so the caller falls back.
+ * One request to the dev server's file routes (scripts/fileDialogs.ts). Null
+ * when there is no dev server to ask — a production build, or not macOS — so
+ * the caller falls back. A cancelled dialog throws AbortError, like the
+ * browser's own pickers do.
  */
-async function viaDevServer(route: 'save' | 'open', body?: string): Promise<DevServerFile | null> {
+async function devServerPost(route: string, body?: string | Uint8Array<ArrayBuffer>): Promise<unknown> {
   if (!import.meta.env.DEV) return null
   const response = await fetch(`/__drift/${route}`, {
     method: 'POST',
-    headers: { 'X-Drift': '1', 'Content-Type': 'application/json' },
+    headers: {
+      'X-Drift': '1',
+      'Content-Type': typeof body === 'string' || body === undefined ? 'application/json' : 'application/octet-stream',
+    },
     body,
   })
-  if (response.status === 404) return null
+  // A 404 on a route that starts something means there is no dev server to
+  // ask. On one that continues an export it means the export was lost.
+  if (response.status === 404 && (route === 'save' || route === 'open' || route === 'stream/begin')) return null
   if (response.status === 204) throw new DOMException('Dialog cancelled.', 'AbortError')
   const payload: unknown = await response.json().catch(() => null)
-  if (!response.ok || !isDevServerFile(payload)) {
+  if (!response.ok || payload === null) {
     const message: unknown = payload === null ? null : Reflect.get(Object(payload), 'error')
-    throw new Error(typeof message === 'string' ? message : `Dev server could not ${route} the file.`)
+    throw new Error(typeof message === 'string' ? message : 'The dev server could not write the file.')
   }
+  return payload
+}
+
+async function viaDevServer(route: 'save' | 'open', body?: string): Promise<DevServerFile | null> {
+  const payload = await devServerPost(route, body)
+  if (payload === null) return null
+  if (!isDevServerFile(payload)) throw new Error(`The dev server could not ${route} the file.`)
   return payload
 }
 
@@ -182,6 +205,92 @@ function download(text: string, filename: string): SaveResult {
   // browsers before they have read the blob.
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
   return { name: stripExtension(filename), fellBack: true }
+}
+
+/**
+ * Somewhere a file is written to a piece at a time. Writes are awaited in
+ * order by the caller; nothing here buffers more than the piece in hand,
+ * except the last-resort download, which has no choice.
+ */
+export interface FileSink {
+  /** The file's name, as the dialog left it. */
+  readonly name: string
+  /** True when this is a download collected in memory rather than written as it goes. */
+  readonly inMemory: boolean
+  write(bytes: Uint8Array<ArrayBuffer>): Promise<void>
+  close(): Promise<void>
+  /** Gives up, removing the partial file wherever that is possible. */
+  abort(): Promise<void>
+}
+
+function isStreamBegun(value: unknown): value is { token: string, name: string } {
+  if (typeof value !== 'object' || value === null) return false
+  return typeof Reflect.get(value, 'token') === 'string' && typeof Reflect.get(value, 'name') === 'string'
+}
+
+/**
+ * A file to export a WAV into, chosen through a Save dialog where there is
+ * one. Must be called straight from the click that asked for it: the
+ * browser's own dialog needs that click to be recent.
+ */
+export async function openWavSink(suggestedName: string): Promise<FileSink> {
+  const begun = await devServerPost('stream/begin', JSON.stringify({ name: suggestedName, extension: '.wav' }))
+  if (begun !== null) {
+    if (!isStreamBegun(begun)) throw new Error('The dev server could not start the export.')
+    const query = `?token=${encodeURIComponent(begun.token)}`
+    return {
+      name: begun.name,
+      inMemory: false,
+      write: async (bytes) => { await devServerPost(`stream/write${query}`, bytes) },
+      close: async () => { await devServerPost(`stream/end${query}`) },
+      abort: async () => { await devServerPost(`stream/abort${query}`) },
+    }
+  }
+
+  const picker = savePicker()
+  if (picker) {
+    const handle = await picker({ suggestedName, types: [WAV_TYPE] })
+    try {
+      // Chrome writes this to a swap file beside the target and moves it into
+      // place on close, so nothing accumulates in the tab.
+      const writable = await handle.createWritable()
+      return {
+        name: handle.name,
+        inMemory: false,
+        write: (bytes) => writable.write(bytes),
+        close: () => writable.close(),
+        abort: () => writable.abort(),
+      }
+    } catch (error) {
+      if (!isRefusal(error)) throw error
+      rememberRefusal()
+      console.warn('drift: file handle refused, downloading instead', error)
+      return downloadSink(handle.name)
+    }
+  }
+  return downloadSink(suggestedName)
+}
+
+/** The last resort: collect the pieces, then hand them to the browser as a download. */
+function downloadSink(filename: string): FileSink {
+  let parts: Uint8Array<ArrayBuffer>[] = []
+  return {
+    name: filename,
+    inMemory: true,
+    write: async (bytes) => { parts.push(bytes) },
+    close: async () => {
+      const url = URL.createObjectURL(new Blob(parts, { type: 'audio/wav' }))
+      parts = []
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      anchor.click()
+      // Revoked on a delay: revoking immediately can cancel the download in
+      // some browsers before they have read the blob.
+      setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    },
+    abort: async () => { parts = [] },
+  }
 }
 
 export interface OpenedFile {

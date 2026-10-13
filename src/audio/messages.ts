@@ -2,6 +2,7 @@ import type { Macros } from '../macros/macros.ts'
 import type { EngineSnapshot } from '../engine/engine.ts'
 import type { SlotDesc } from '../engine/rack.ts'
 import type { Song } from '../song/song.ts'
+import type { CaptureRequest } from './captureWav.ts'
 
 /**
  * `epoch` counts seeks. Audio rendered before a seek can still be in flight
@@ -16,19 +17,12 @@ export type ToWorker =
   | { type: 'song'; song: Song }
   | { type: 'seek'; bar: number; epoch: number }
   | { type: 'render'; frames: number; id: number; epoch: number }
-  | {
-      type: 'capture'
-      /** 'song' renders the song once through plus its tail; 'minutes' renders `seconds`. */
-      mode: 'song' | 'minutes'
-      seconds: number
-      macros: Macros
-      seed: number
-      slots: SlotDesc[]
-      song: Song
-      id: number
-    }
+  | ({ type: 'capture'; id: number } & CaptureRequest)
 
 export type FromWorker =
   | { type: 'chunk'; id: number; epoch: number; left: Float32Array<ArrayBuffer>; right: Float32Array<ArrayBuffer>; snapshot: EngineSnapshot }
-  | { type: 'capture'; id: number; left: Float32Array<ArrayBuffer>; right: Float32Array<ArrayBuffer>; sampleRate: number }
+  /** The next piece of the WAV, in order: the header first, then each slice. */
+  | { type: 'captureChunk'; id: number; bytes: Uint8Array<ArrayBuffer> }
+  /** Every piece has been sent. */
+  | { type: 'capture'; id: number }
   | { type: 'captureProgress'; id: number; progress: number }
