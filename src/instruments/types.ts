@@ -89,6 +89,12 @@ export interface InstrumentDef {
   readonly hits?: (ctx: PatternContext) => PercussionEvent[]
   /** Textural instruments make no events; they simply run. */
   readonly continuous?: boolean
+  /**
+   * Sits outside the kick's sidechain. For sounds that belong to the room or
+   * the record rather than the band: crackle or crickets that pump on every
+   * beat are instantly wrong.
+   */
+  readonly unducked?: boolean
   readonly fixed?: Readonly<Record<string, FixedParam>>
   /** The knobs shown for this instrument, in order. */
   readonly controls?: readonly ControlSpec[]

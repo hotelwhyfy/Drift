@@ -68,6 +68,46 @@ describe('determinism', () => {
     }
     expect(build(true)).toEqual(build(false))
   })
+
+  it('keeps the soundscape voices deterministic, whatever the buffer sizes', () => {
+    // Drone, choir and field run random walks every sample. Each must draw
+    // only from its seeded generator, and the same everywhere it is played.
+    const frames = SR * 3
+    const run = (sizes: number[]) => {
+      const e = new Engine(SR, DEFAULT_MACROS, 31)
+      e.snapMacros(DEFAULT_MACROS)
+      for (const id of ['drone', 'choir', 'field']) e.rack.add(id)
+      e.seek(0)
+      const l = new Float32Array(frames)
+      const r = new Float32Array(frames)
+      let done = 0
+      let i = 0
+      while (done < frames) {
+        const n = Math.min(sizes[i++ % sizes.length], frames - done)
+        e.render(l.subarray(done, done + n), r.subarray(done, done + n), n)
+        done += n
+      }
+      return Array.from(r)
+    }
+    const whole = run([frames])
+    expect(run([frames])).toEqual(whole)
+    expect(run([1, 127, 4096, 333, 9000])).toEqual(whole)
+  })
+
+  it('places the soundscape voices the same at a seeked bar as at a played one', () => {
+    const ctx: HarmonicContext = {
+      chord: { degree: 0, notes: [60, 63, 67, 70], root: 48 },
+      mode: MODES[1],
+      rootMidi: 48,
+    }
+    const build = (walk: boolean) => {
+      const rack = new Rack(SR, 7)
+      for (const id of [...DEFAULT_RACK, 'drone', 'choir', 'field']) rack.add(id)
+      if (walk) for (let bar = 0; bar < 64; bar++) rack.bar(bar, ctx, 72, 0.1, 0.3)
+      return rack.bar(64, ctx, 72, 0.1, 0.3)
+    }
+    expect(build(true)).toEqual(build(false))
+  })
 })
 
 describe('output safety', () => {

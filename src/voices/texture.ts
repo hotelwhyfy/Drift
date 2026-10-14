@@ -1,8 +1,7 @@
 import { Svf } from '../dsp/svf.ts'
 import { Noise, SmoothRandom } from '../dsp/noise.ts'
-import { Decay } from '../dsp/env.ts'
+import { Bubbles } from '../dsp/bubbles.ts'
 import { clamp01, lerp } from '../core/curves.ts'
-import { sineFrom } from '../dsp/osc.ts'
 import type { Rng } from '../core/rng.ts'
 import type { Stereo } from './types.ts'
 
@@ -53,11 +52,8 @@ export class Texture {
   private gust: SmoothRandom
   private washL: Svf
   private washR: Svf
-  private drops: Decay[] = []
-  private dropHz = new Float64Array(DROPS)
-  private dropRise = new Float64Array(DROPS)
-  private dropPhase = new Float64Array(DROPS)
-  private dropPan = new Float64Array(DROPS)
+  private drops: Bubbles
+  private dropFrame: Stereo = [0, 0]
   private params: TextureParams
   /** Current mix of each kind, easing towards 1 for the chosen one. */
   private mix = new Float64Array(TEXTURE_KINDS.length)
@@ -80,7 +76,7 @@ export class Texture {
     this.gust = new SmoothRandom(sampleRate, rng, 0.11)
     this.washL = new Svf(sampleRate)
     this.washR = new Svf(sampleRate)
-    for (let i = 0; i < DROPS; i++) this.drops.push(new Decay(sampleRate))
+    this.drops = new Bubbles(sampleRate, rng, DROPS)
     this.params = { kind: 'air', tone: 0.5, motion: 0.5, level: 0.12 }
     this.mix[TEXTURE_KINDS.indexOf('air')] = 1
     this.fade = 1 - Math.exp(-1 / (CROSSFADE * 0.3 * sampleRate))
@@ -133,33 +129,15 @@ export class Texture {
         this.washR.set(far * 1.06, 0.5)
         l += this.washL.lowpass(this.noise.pink()) * 0.34 * g
         r += this.washR.lowpass(this.noise.pink()) * 0.34 * g
-        // A few drops land in water nearby. A drop rings as a small bubble
-        // whose pitch rises as it closes, and that chirp is what makes it
-        // water. A fixed resonance just pings like electronics.
+        // A few drops land in water nearby.
         const rate = lerp(5, 22, tone)
-        if (this.rng() < (rate * g) / this.sampleRate) {
-          for (let i = 0; i < DROPS; i++) {
-            if (!this.drops[i].active) {
-              const seconds = lerp(0.008, 0.035, this.rng())
-              this.drops[i].set(seconds)
-              this.drops[i].trigger(0.15 + Math.pow(this.rng(), 2) * 0.85)
-              this.dropHz[i] = lerp(1300, 4200, Math.pow(this.rng(), 1.5))
-              this.dropRise[i] = Math.pow(lerp(1.5, 2.4, this.rng()), 1 / (seconds * this.sampleRate))
-              this.dropPhase[i] = 0
-              this.dropPan[i] = (this.rng() - 0.5) * 1.6
-              break
-            }
-          }
-        }
-        for (let i = 0; i < DROPS; i++) {
-          if (!this.drops[i].active) continue
-          this.dropPhase[i] += this.dropHz[i] / this.sampleRate
-          if (this.dropPhase[i] >= 1) this.dropPhase[i] -= 1
-          this.dropHz[i] *= this.dropRise[i]
-          const s = sineFrom(this.dropPhase[i]) * this.drops[i].process() * 0.25 * g
-          l += s * (0.5 - this.dropPan[i] * 0.5)
-          r += s * (0.5 + this.dropPan[i] * 0.5)
-        }
+        if (this.rng() < (rate * g) / this.sampleRate) this.drops.spawn(1300, 4200, 0.008, 0.035, 1.6)
+        const frame = this.dropFrame
+        frame[0] = 0
+        frame[1] = 0
+        this.drops.process(frame, 0.25 * g)
+        l += frame[0]
+        r += frame[1]
       } else if (kind === 'ocean') {
         // Brown noise through a low band that opens and closes very slowly:
         // the shape of a wave rather than the sound of one.

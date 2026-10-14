@@ -2,6 +2,7 @@
  * Render each scene to a WAV and print what came out. Run with:
  *   npm run audition            all scenes, 30s each
  *   npm run audition -- Rain 60 one scene, 60s
+ *   npm run audition -- --add drone,field   the default rack plus these
  *
  * The numbers matter as much as the files: a scene that peaks at 0.999 is
  * limiting hard, and one whose RMS sits below -30 dBFS is barely there.
@@ -14,9 +15,13 @@ import { deriveSeed } from '../src/core/rng.ts'
 import { buildPatch, modeNameAt } from '../src/macros/patch.ts'
 
 const SAMPLE_RATE = 44100
-const args = process.argv.slice(2)
+const argv = process.argv.slice(2)
+const addAt = argv.indexOf('--add')
+const extra = addAt >= 0 ? (argv[addAt + 1] ?? '').split(',').filter((id) => id.length > 0) : []
+const args = addAt >= 0 ? argv.filter((_, i) => i !== addAt && i !== addAt + 1) : argv
 const only = args[0]
 const seconds = Number(args[1] ?? 30)
+const suffix = extra.length > 0 ? `+${extra.join('+')}` : ''
 
 mkdirSync('out', { recursive: true })
 
@@ -31,6 +36,10 @@ for (const scene of list) {
   const right = new Float32Array(frames)
   const engine = new Engine(SAMPLE_RATE, scene.macros, deriveSeed(scene.name))
   engine.snapMacros(scene.macros)
+  for (const id of extra) {
+    if (engine.rack.add(id) === null) throw new Error(`no instrument called ${id}`)
+  }
+  if (extra.length > 0) engine.seek(0)
 
   const t0 = Date.now()
   engine.render(left, right, frames)
@@ -51,7 +60,7 @@ for (const scene of list) {
   const db = (x: number) => (x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf')
   const patch = buildPatch(scene.macros)
 
-  writeFileSync(`out/${scene.name.toLowerCase()}.wav`,
+  writeFileSync(`out/${scene.name.toLowerCase()}${suffix}.wav`,
     Buffer.from(encodeWav(left, right, SAMPLE_RATE)))
 
   console.log(

@@ -81,6 +81,18 @@ const VOICES: readonly string[] = ['rhodes', 'strings', 'shimmer', 'glass']
 const SPARSE: readonly string[] = ['rhodes', 'glass']
 const SPARSE_FOLLOW = 0.5
 
+/**
+ * The held, spacious voices: they lean on space and shy away from a beat,
+ * since a drone under a groove is a different genre.
+ */
+function soundscapeCandidates(macros: Macros): Candidate[] {
+  return [
+    { defId: 'drone', chance: (0.05 + macros.space * 0.3 + macros.warmth * 0.2) * (1 - macros.pulse * 0.6) },
+    { defId: 'choir', chance: 0.05 + macros.space * 0.35 + macros.drift * 0.1 },
+    { defId: 'field', chance: (0.1 + macros.space * 0.3) * (1 - macros.pulse * 0.5) },
+  ]
+}
+
 function rackFor(macros: Macros, seed: number): SlotDesc[] {
   const rng = rngAt(seed, 'generate', 'rack')
   const candidates: Candidate[] = [
@@ -104,6 +116,12 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
   if (!chosen.some((defId) => VOICES.includes(defId))) {
     const weights = VOICES.map((defId) => candidates.find((c) => c.defId === defId)?.chance ?? 0)
     chosen.push(VOICES[pickWeighted(rng, weights)])
+  }
+  // Later arrivals each toss their own coin rather than drawing from the
+  // shared sequence, so a seed name kept from before they existed still gets
+  // exactly the room it always did, plus at most a newcomer.
+  for (const c of soundscapeCandidates(macros)) {
+    if (rngAt(seed, 'generate', 'rack', c.defId)() < clamp01(c.chance)) chosen.push(c.defId)
   }
 
   return chosen.map((defId, index) => {

@@ -8,6 +8,9 @@ import { Vinyl } from '../voices/vinyl.ts'
 import { Texture, TEXTURE_KINDS } from '../voices/texture.ts'
 import { Strings } from '../voices/strings.ts'
 import { Shimmer } from '../voices/shimmer.ts'
+import { Drone } from '../voices/drone.ts'
+import { Choir } from '../voices/choir.ts'
+import { Field, FIELD_KINDS } from '../voices/field.ts'
 import { drumPattern } from '../compose/drumPattern.ts'
 import { DRUM_STYLES, FILL_EVERY } from '../compose/drumStyles.ts'
 import { lerp, clamp01 } from '../core/curves.ts'
@@ -353,6 +356,7 @@ const dust: InstrumentDef = {
   blurb: 'Record surface: crackle, hiss and hum. Sits outside the room.',
   create: (sr, rng) => new Vinyl(sr, rng),
   continuous: true,
+  unducked: true,
   rules: {
     outputs: {
       crackle: { min: 0, max: 0.9 },
@@ -652,6 +656,222 @@ const shimmer: InstrumentDef = {
   ],
 }
 
+// ─── Drone ─────────────────────────────────────────────────────────────────
+const drone: InstrumentDef = {
+  id: 'drone',
+  name: 'Drone',
+  role: 'chordal',
+  blurb: 'Low held tones whose harmonics beat and wander. The pitch never moves; the colour never stops.',
+  create: (sr, rng) => new Drone(sr, rng),
+  rules: {
+    outputs: {
+      attack: { min: 1.5, max: 9, scale: 'exp' },
+      release: { min: 3, max: 12, scale: 'exp' },
+      brightness: { min: 0.05, max: 0.85 },
+      beat: { min: 0.08, max: 2.4, scale: 'exp' },
+      evolve: { min: 0.1, max: 0.95 },
+      evolveHz: { min: 0.02, max: 0.4, scale: 'exp' },
+      width: { min: 0.2, max: 1 },
+      voices: { min: 2, max: 3 },
+    },
+    rules: [
+      { when: { brightness: 'high' }, then: { brightness: 'high' } },
+      { when: { brightness: 'mid' }, then: { brightness: 'mid' } },
+      { when: { brightness: 'low' }, then: { brightness: 'low' } },
+      { when: { motion: 'high' }, then: { beat: 'high', evolve: 'high', evolveHz: 'high' } },
+      { when: { motion: 'mid' }, then: { beat: 'mid', evolve: 'mid', evolveHz: 'mid' } },
+      { when: { motion: 'low' }, then: { beat: 'low', evolve: 'low', evolveHz: 'low', attack: 'high' } },
+      // Weight is depth: a heavy drone is darker and takes longer to leave.
+      { when: { weight: 'high' }, then: { release: 'high', brightness: 'low' } },
+      { when: { weight: 'mid' }, then: { release: 'mid' } },
+      { when: { weight: 'low' }, then: { release: 'low', attack: 'mid' } },
+      { when: { density: 'high' }, then: { voices: 'high', width: 'high' } },
+      { when: { density: 'mid' }, then: { voices: 'mid', width: 'mid' } },
+      { when: { density: 'low' }, then: { voices: 'low', width: 'low' } },
+      // Tension is a faster beat: the same intervals, less at rest.
+      { when: { tension: 'high' }, then: { beat: 'high', attack: 'low' } },
+      { when: { tension: 'mid' }, then: { attack: 'mid' } },
+      { when: { tension: 'low' }, then: { beat: 'low' } },
+    ],
+  },
+  fixed: {
+    register: { min: -12, max: 12, default: 0.5 },
+  },
+  // Under the pad's left hand. Low enough that the resolver's rule against
+  // close intervals down there leaves open fifths and octaves, which is what
+  // a drone wants anyway.
+  register: (p, base) => ({ centre: base.centre - 14 + Math.round(p.register ?? 0), span: base.span }),
+  apply: (voice, p, level) => {
+    if (voice instanceof Drone) {
+      voice.set({
+        attack: p.attack, release: p.release, brightness: p.brightness, beat: p.beat,
+        evolve: p.evolve, evolveHz: p.evolveHz, width: p.width, level: level * 0.12,
+      })
+    }
+  },
+  notes: (ctx) => {
+    // The same low contours every bar, so a chord that stays is a drone that
+    // stays: the voice holds a note it is asked for again rather than
+    // restriking it.
+    const voices = Math.round(ctx.params.voices ?? 2)
+    const out: NoteIntent[] = []
+    for (let i = 0; i < voices; i++) {
+      out.push({
+        role: 'chordal',
+        contour: -0.9 + i * 0.7,
+        weight: lerp(0.65, 0.8, ctx.rng()),
+        step: 0,
+        lengthSteps: 16 * 1.05,
+      })
+    }
+    return out
+  },
+  controls: [
+    { param: 'brightness', label: 'Bright', group: 'sound' },
+    { param: 'beat', label: 'Beat', group: 'sound' },
+    { param: 'evolve', label: 'Evolve', group: 'sound' },
+    { param: 'evolveHz', label: 'Evolve rate', group: 'sound' },
+    { param: 'width', label: 'Width', group: 'sound' },
+    { param: 'attack', label: 'Attack', group: 'shape' },
+    { param: 'release', label: 'Release', group: 'shape' },
+    { param: 'voices', label: 'Voices', group: 'voicing' },
+    { param: 'register', label: 'Register', group: 'voicing' },
+  ],
+}
+
+// ─── Choir ─────────────────────────────────────────────────────────────────
+const choir: InstrumentDef = {
+  id: 'choir',
+  name: 'Choir',
+  role: 'chordal',
+  blurb: 'Wordless voices holding the chord. The vowel opens with the light.',
+  create: (sr, rng) => new Choir(sr, rng),
+  rules: {
+    outputs: {
+      attack: { min: 0.8, max: 5, scale: 'exp' },
+      release: { min: 1.5, max: 7, scale: 'exp' },
+      vowel: { min: 0, max: 1 },
+      vowelDrift: { min: 0.05, max: 1 },
+      vibrato: { min: 2, max: 20 },
+      breath: { min: 0.05, max: 0.6 },
+      ensemble: { min: 0.15, max: 0.9 },
+      width: { min: 0.3, max: 1 },
+      voices: { min: 2, max: 4 },
+    },
+    rules: [
+      // Dark is a closed mouth, bright an open one: oo through ah to eh.
+      { when: { brightness: 'high' }, then: { vowel: 'high' } },
+      { when: { brightness: 'mid' }, then: { vowel: 'mid' } },
+      { when: { brightness: 'low' }, then: { vowel: 'low' } },
+      { when: { motion: 'high' }, then: { vowelDrift: 'high', vibrato: 'high' } },
+      { when: { motion: 'mid' }, then: { vowelDrift: 'mid', vibrato: 'mid' } },
+      { when: { motion: 'low' }, then: { vowelDrift: 'low', vibrato: 'low', attack: 'high' } },
+      { when: { weight: 'high' }, then: { ensemble: 'high', release: 'high' } },
+      { when: { weight: 'mid' }, then: { ensemble: 'mid', release: 'mid' } },
+      { when: { weight: 'low' }, then: { ensemble: 'low', attack: 'high' } },
+      { when: { density: 'high' }, then: { voices: 'high', width: 'high' } },
+      { when: { density: 'mid' }, then: { voices: 'mid', width: 'mid' } },
+      { when: { density: 'low' }, then: { voices: 'low', width: 'low' } },
+      // Strain shows as air in the voice and a wider vibrato.
+      { when: { tension: 'high' }, then: { breath: 'high', vibrato: 'high', attack: 'low' } },
+      { when: { tension: 'mid' }, then: { breath: 'mid' } },
+      { when: { tension: 'low' }, then: { breath: 'low' } },
+    ],
+  },
+  fixed: {
+    register: { min: -12, max: 12, default: 0.5 },
+  },
+  // Between the pad and the strings. The resolver keeps all three off each
+  // other's notes, so they share the chord rather than doubling it.
+  register: (p, base) => ({ centre: base.centre + 3 + Math.round(p.register ?? 0), span: base.span }),
+  apply: (voice, p, level) => {
+    if (voice instanceof Choir) {
+      voice.set({
+        attack: p.attack, release: p.release, vowel: p.vowel, vowelDrift: p.vowelDrift,
+        vibrato: p.vibrato, breath: p.breath, ensemble: p.ensemble, width: p.width,
+        level: level * 0.6,
+      })
+    }
+  },
+  notes: (ctx) => {
+    const voices = Math.round(ctx.params.voices ?? 3)
+    const out: NoteIntent[] = []
+    for (let i = 0; i < voices; i++) {
+      out.push({
+        role: 'chordal',
+        contour: -0.5 + (i / Math.max(1, voices - 1)) * 1.2,
+        weight: lerp(0.55, 0.8, ctx.rng()),
+        step: 0,
+        lengthSteps: 16 * 1.05,
+      })
+    }
+    return out
+  },
+  controls: [
+    { param: 'vowel', label: 'Vowel', group: 'voice' },
+    { param: 'vowelDrift', label: 'Drift', group: 'voice' },
+    { param: 'breath', label: 'Breath', group: 'voice' },
+    { param: 'vibrato', label: 'Vibrato', group: 'voice' },
+    { param: 'attack', label: 'Attack', group: 'shape' },
+    { param: 'release', label: 'Release', group: 'shape' },
+    { param: 'ensemble', label: 'Ensemble', group: 'shape' },
+    { param: 'width', label: 'Width', group: 'shape' },
+    { param: 'voices', label: 'Voices', group: 'voicing' },
+    { param: 'register', label: 'Register', group: 'voicing' },
+  ],
+}
+
+// ─── Field ─────────────────────────────────────────────────────────────────
+const field: InstrumentDef = {
+  id: 'field',
+  name: 'Field',
+  role: 'colour',
+  blurb: 'A place outside: night crickets, a fire, a stream, or distant thunder.',
+  create: (sr, rng) => new Field(sr, rng),
+  continuous: true,
+  unducked: true,
+  rules: {
+    outputs: {
+      tone: { min: 0.1, max: 0.9 },
+      activity: { min: 0.1, max: 0.95 },
+      swell: { min: 0.1, max: 0.9 },
+      // As the bed's: terms centred on rumble, fire and night, so stream is
+      // what a blend of fire and night lands on.
+      kind: {
+        min: 0,
+        max: FIELD_KINDS.length - 0.01,
+        terms: { low: tri(0, 0.125, 0.25), mid: tri(0.25, 0.375, 0.5), high: tri(0.75, 0.875, 1) },
+      },
+    },
+    rules: [
+      { when: { brightness: 'high' }, then: { tone: 'high', kind: 'high' } },
+      { when: { brightness: 'mid' }, then: { tone: 'mid', kind: 'mid' } },
+      { when: { brightness: 'low' }, then: { tone: 'low', kind: 'low' } },
+      { when: { weight: 'high' }, then: { kind: 'low', tone: 'low' } },
+      { when: { density: 'high' }, then: { activity: 'high' } },
+      { when: { density: 'mid' }, then: { activity: 'mid' } },
+      { when: { density: 'low' }, then: { activity: 'low' } },
+      { when: { motion: 'high' }, then: { swell: 'high' } },
+      { when: { motion: 'mid' }, then: { swell: 'mid' } },
+      { when: { motion: 'low' }, then: { swell: 'low' } },
+    ],
+  },
+  apply: (voice, p, level) => {
+    if (voice instanceof Field) {
+      voice.set({
+        kind: FIELD_KINDS[Math.min(FIELD_KINDS.length - 1, Math.max(0, Math.floor(p.kind)))],
+        tone: p.tone, activity: p.activity, swell: p.swell, level: level * 0.3,
+      })
+    }
+  },
+  controls: [
+    { param: 'kind', label: 'Kind', options: FIELD_KINDS },
+    { param: 'tone', label: 'Tone' },
+    { param: 'activity', label: 'Activity' },
+    { param: 'swell', label: 'Swell' },
+  ],
+}
+
 /** Generic melodic pattern, shared by pitched instruments that want a line. */
 function intentsFor(ctx: PatternContext, role: 'melodic'): NoteIntent[] {
   const rate = ctx.params.rate ?? 3
@@ -681,7 +901,7 @@ function intentsFor(ctx: PatternContext, role: 'melodic'): NoteIntent[] {
 
 /** In the order the picker lists them: the harmony and the room first. */
 export const INSTRUMENTS: readonly InstrumentDef[] = [
-  padInstrument, strings, shimmer, bed, sub, glass, rhodes, dust, kit,
+  padInstrument, strings, choir, drone, shimmer, bed, field, sub, glass, rhodes, dust, kit,
 ]
 
 export function instrumentById(id: string): InstrumentDef | undefined {

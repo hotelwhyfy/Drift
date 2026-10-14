@@ -436,7 +436,7 @@ export class Rack {
       slot.voice.process(acc)
       // Percussion and surface noise sit outside the sidechain: a kick cannot
       // duck itself, and crackle that pumps on every beat is instantly wrong.
-      const target = slot.def.hits || slot.defId === 'dust' ? unducked : duckable
+      const target = slot.def.hits || slot.def.unducked ? unducked : duckable
       target[0] += acc[0]
       target[1] += acc[1]
     }

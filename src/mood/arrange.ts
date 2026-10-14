@@ -141,6 +141,36 @@ export function rackFor(reading: Reading): SlotDesc[] {
     })
   }
 
+  // Heavy and still wants something held under it that never quite settles.
+  if (e.weight > 0.45 && e.motion < 0.45) {
+    choices.push({
+      defId: 'drone',
+      expression: shade(e, { motion: clamp01(e.motion * 0.6 + 0.1) }),
+      follow: 0.6,
+      level: lerp(0.5, 0.85, e.weight),
+    })
+  }
+
+  // Voices for the calm, open answers — company that asks nothing.
+  if (reading.arousal < 0.4 && e.density < 0.55) {
+    choices.push({
+      defId: 'choir',
+      expression: shade(e, { density: clamp01(e.density * 0.8) }),
+      follow: 0.65,
+      level: lerp(0.45, 0.75, 1 - e.density),
+    })
+  }
+
+  // Somewhere outside for the sparse and quiet: the music gets a place to be.
+  if (reading.arousal < 0.5 && e.density < 0.5) {
+    choices.push({
+      defId: 'field',
+      expression: shade(e, { motion: clamp01(e.motion * 0.7 + 0.15) }),
+      follow: 0.5,
+      level: lerp(0.45, 0.85, 1 - e.density),
+    })
+  }
+
   return choices.map((choice, index) => {
     const def = instrumentById(choice.defId)
     return {
@@ -179,9 +209,9 @@ function lanesFor(choice: Choice, reading: Reading, roll: number): Lane[] {
     bars: 16,
   })
 
-  // Beds and bells swell and recede on their own, which is most of what stops
-  // a texture from reading as a held chord.
-  if (choice.defId === 'bed' || choice.defId === 'glass') {
+  // Beds, fields and bells swell and recede on their own, which is most of
+  // what stops a texture from reading as a held chord.
+  if (choice.defId === 'bed' || choice.defId === 'field' || choice.defId === 'glass') {
     const swell = makeLane(`${choice.defId}-swell`, { kind: 'level' })
     lanes.push({
       ...swell,
