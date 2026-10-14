@@ -135,6 +135,9 @@ export function Timeline({
       const dx = e.deltaX !== 0 ? e.deltaX : e.shiftKey ? e.deltaY : 0
       if (dx === 0) return
       e.preventDefault()
+      // Scrolling away is a request to look somewhere else; following would
+      // page straight back and fight it.
+      setFollow(false)
       setStartBar(Math.max(0, sb + dx / px))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -317,7 +320,7 @@ export function Timeline({
             type="button"
             className={`tl-btn ${follow ? 'on' : ''}`}
             onClick={() => setFollow((f) => !f)}
-            title="Keep the playhead in view"
+            title="Keep the playhead in view. Scrolling away turns it off"
           >follow</button>
         </div>
       </div>
@@ -481,6 +484,9 @@ export function Timeline({
       <div
         className="tl-scroll"
         ref={scrollRef}
+        // A hand on the scrollbar, not any scroll event: syncing it to the
+        // playhead scrolls it too, and the browser may clamp that sync.
+        onPointerDown={() => setFollow(false)}
         onScroll={(e) => {
           const next = e.currentTarget.scrollLeft / pxPerBar
           if (Math.abs(next - startBar) * pxPerBar > 1) setStartBar(next)

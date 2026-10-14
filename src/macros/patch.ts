@@ -126,6 +126,9 @@ function snapPhrase(bars: number): number {
  * sit higher, where the tilt filter and the ear's own curve both take level.
  * Space and density fit to zero with this rack, so they are left out rather
  * than carried as coefficients of nothing.
+ * Last re-fit when the sub dropped an octave, from the eight scenes alone
+ * (no random points), so five terms on eight measurements: re-measure with
+ * the random points before trusting the drift term, which changed sign.
  * Re-fit with `npm run audition` after changing any instrument's level.
  */
 function levelTrim(
@@ -136,7 +139,7 @@ function levelTrim(
   _density: number,
   drift: number,
 ): number {
-  const db = 10.2 - 11.0 * warmth - 0.3 * pulse + 2.0 * colour + 1.3 * drift
+  const db = 11.2 - 9.2 * warmth - 1.4 * pulse + 2.1 * colour - 1.3 * drift
   return dbToGain(clamp(db, -6, 12))
 }
 

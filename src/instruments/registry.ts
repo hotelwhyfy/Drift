@@ -223,10 +223,14 @@ const sub: InstrumentDef = {
   notes: (ctx) => {
     const out: NoteIntent[] = []
     const activity = ctx.params.activity ?? 0.5
-    out.push({ role: 'bass', contour: -0.4, weight: lerp(0.75, 1, ctx.rng()), step: 0, lengthSteps: 14 })
-    if (ctx.rng() < activity * 0.6) {
-      const step = [6, 8, 10, 11][Math.floor(ctx.rng() * 4)]
-      out.push({ role: 'bass', contour: ctx.rng() < 0.5 ? -0.4 : 0.5, weight: lerp(0.45, 0.75, ctx.rng()), step, lengthSteps: 5 })
+    // A sub is a floor, not a line: one root held across the bar. Only real
+    // movement earns a second note, and it keeps the downbeat's contour — two
+    // contours either side of the root resolve to the same pitch an octave
+    // apart, and the portamento turns that into a slide every bar.
+    const second = ctx.rng() < clamp01((activity - 0.55) * 1.5)
+    out.push({ role: 'bass', contour: -0.4, weight: lerp(0.75, 1, ctx.rng()), step: 0, lengthSteps: second ? 8 : 16 })
+    if (second) {
+      out.push({ role: 'bass', contour: -0.4, weight: lerp(0.45, 0.65, ctx.rng()), step: 8, lengthSteps: 8 })
     }
     return out
   },

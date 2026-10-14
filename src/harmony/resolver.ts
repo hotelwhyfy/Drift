@@ -223,7 +223,9 @@ export class Resolver {
   static registerFor(role: Role, rootMidi: number): Register {
     switch (role) {
       case 'bass':
-        return { centre: rootMidi, span: 7 }
+        // An octave under the key's root: the sub sits beneath the pad's left
+        // hand rather than alongside it, around 35–105 Hz.
+        return { centre: rootMidi - 12, span: 7 }
       case 'chordal':
         return { centre: rootMidi + 22, span: 9 }
       case 'melodic':

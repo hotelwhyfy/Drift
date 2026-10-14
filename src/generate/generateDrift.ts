@@ -71,6 +71,16 @@ interface Candidate {
 /** The instruments that play a line, rather than holding or colouring one. */
 const VOICES: readonly string[] = ['rhodes', 'strings', 'shimmer', 'glass']
 
+/**
+ * The struck voices, whose notes are discrete events rather than a held sound.
+ * Following the dials completely, they play as busily as the whole piece is
+ * dense, which on a struck note reads as chatter. They lean sparse and still,
+ * and only half follow, so a dense setting fills them out without filling
+ * every step.
+ */
+const SPARSE: readonly string[] = ['rhodes', 'glass']
+const SPARSE_FOLLOW = 0.5
+
 function rackFor(macros: Macros, seed: number): SlotDesc[] {
   const rng = rngAt(seed, 'generate', 'rack')
   const candidates: Candidate[] = [
@@ -98,6 +108,12 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
 
   return chosen.map((defId, index) => {
     const slotRng = rngAt(seed, 'generate', 'slot', defId)
+    const sparse = SPARSE.includes(defId)
+    const character = characterFor(slotRng)
+    if (sparse) {
+      character.density = range(slotRng, 0.05, 0.2)
+      character.motion = range(slotRng, 0.1, 0.25)
+    }
     return {
       id: `${defId}-${index}`,
       defId,
@@ -105,11 +121,11 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
       level: clamp01(0.8 + centred(slotRng, 0.12)),
       muted: false,
       soloed: false,
-      expression: characterFor(slotRng),
+      expression: character,
       // Following the dials completely, as a new slot does, so the six dials
-      // still play the whole piece.
-      follow: 1,
-      lanes: [breathFor(defId, slotRng)],
+      // still play the whole piece — except the struck voices, above.
+      follow: sparse ? SPARSE_FOLLOW : 1,
+      lanes: [breathFor(defId, slotRng, sparse)],
       knobs: {},
     }
   })
@@ -129,13 +145,16 @@ function characterFor(rng: Rng): Expression {
  * A slow, never-repeating walk on each instrument's motion — the same small
  * life the mood version gives every voice, which is most of what stops a long
  * drift from sounding like a loop.
+ *
+ * On a sparse voice it scales rather than adds: the walk can only settle it
+ * below where the dials put it, never push it into more notes.
  */
-function breathFor(defId: string, rng: Rng): Lane {
+function breathFor(defId: string, rng: Rng, sparse: boolean): Lane {
   const lane = makeLane(`${defId}-breath`, { kind: 'expression', key: 'motion' })
   return {
     ...lane,
     source: { kind: 'walk', smoothness: range(rng, 0.8, 0.92), seed: Math.floor(rng() * 0xffffffff) },
-    mode: 'add',
+    mode: sparse ? 'scale' : 'add',
     depth: range(rng, 0.12, 0.28),
     bars: pick(rng, [16, 24, 32]),
   }
