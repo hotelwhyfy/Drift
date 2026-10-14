@@ -717,6 +717,7 @@ select {
 }
 
 .file-actions button:hover { color: var(--ink); background: #ffffff0c; }
+.file-actions button:disabled { opacity: 0.35; cursor: default; background: none; color: var(--ink-faint); }
 .file-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .file-actions svg {

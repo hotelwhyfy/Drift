@@ -33,6 +33,7 @@ export class Bass {
   private hz = 55
   private velocity = 0
   private glideTarget = 55
+  private midi = -1
   private glideCoef: number
   private sample = 0
   private releaseAt = Infinity
@@ -56,6 +57,7 @@ export class Bass {
    * itself to A = 3 Hz and played, for a long time, well below hearing.
    */
   noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {
+    this.midi = midi
     this.glideTarget = midiToHz(midi, referenceHz)
     // A short portamento between roots is the classic lo-fi bass gesture and
     // also hides the click a hard pitch jump would make on a sustaining sine.
@@ -64,6 +66,11 @@ export class Bass {
     this.amp.set(0.012, this.params.decay, 0.55, this.params.release)
     this.amp.gate()
     this.releaseAt = this.sample + durationSec * this.sampleRate
+  }
+
+  /** Through the portamento, so a retune glides rather than clicks. */
+  retune(referenceHz: number): void {
+    if (this.midi >= 0) this.glideTarget = midiToHz(this.midi, referenceHz)
   }
 
   noteOff(): void {

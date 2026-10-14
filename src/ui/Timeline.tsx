@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Song, SongEnd, Envelope, MacroTrack } from '../song/song.ts'
-import { MAX_SONG_BARS } from '../song/song.ts'
+import { MAX_SONG_BARS, MIN_TUNING, MAX_TUNING } from '../song/song.ts'
 import { songSeconds } from '../song/songSeconds.ts'
 import type { Macros, MacroKey } from '../macros/macros.ts'
 import { MACRO_INFO } from '../macros/macros.ts'
@@ -28,6 +28,8 @@ interface Props {
   playhead: number
   playing: boolean
   accent: string
+  /** The A4 the dials give at the playhead — what an empty tuning field means. */
+  autoTuning: number
   onSongChange: (song: Song) => void
   onSlotsChange: (slots: SlotDesc[]) => void
   onSeek: (bar: number) => void
@@ -63,13 +65,14 @@ function targetLabel(slot: SlotDesc, lane: Lane): string {
  * pointer, from whole phrases per pixel to a beat per finger-width.
  */
 export function Timeline({
-  song, dials, slots, playhead, playing, accent, onSongChange, onSlotsChange, onSeek, children,
+  song, dials, slots, playhead, playing, accent, autoTuning, onSongChange, onSlotsChange, onSeek, children,
 }: Props) {
   const [pxPerBar, setPxPerBar] = useState(10)
   const [startBar, setStartBar] = useState(0)
   const [follow, setFollow] = useState(true)
   const [width, setWidth] = useState(0)
   const [lengthDraft, setLengthDraft] = useState<string | null>(null)
+  const [tuningDraft, setTuningDraft] = useState<string | null>(null)
   const [scrub, setScrub] = useState<number | null>(null)
   const rowsRef = useRef<HTMLDivElement>(null)
   const rulerRef = useRef<HTMLCanvasElement>(null)
@@ -211,6 +214,18 @@ export function Timeline({
     onSongChange({ ...song, lengthBars: Math.min(MAX_SONG_BARS, Math.max(1, n)) })
   }
 
+  /** Empty hands the reference back to the dials. */
+  const setTuning = (text: string): void => {
+    setTuningDraft(null)
+    if (text.trim() === '') {
+      onSongChange({ ...song, tuning: null })
+      return
+    }
+    const hz = Number(text)
+    if (!Number.isFinite(hz)) return
+    onSongChange({ ...song, tuning: Math.round(Math.min(MAX_TUNING, Math.max(MIN_TUNING, hz)) * 10) / 10 })
+  }
+
   const setSlotLane = (slotId: string, laneId: string, next: Lane | null): void => {
     onSlotsChange(slots.map((s) => s.id !== slotId ? s : {
       ...s,
@@ -273,6 +288,22 @@ export function Timeline({
             >{end}</button>
           ))}
         </div>
+        <label className="tl-length" title="Concert pitch for the whole song. Leave empty and the dials drift it between 432 and 441.">
+          <span>A4</span>
+          <input
+            type="number"
+            min={MIN_TUNING}
+            max={MAX_TUNING}
+            step={0.5}
+            placeholder={autoTuning.toFixed(1)}
+            value={tuningDraft ?? (song.tuning === null ? '' : String(song.tuning))}
+            onChange={(e) => setTuningDraft(e.target.value)}
+            onBlur={(e) => setTuning(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') setTuning(e.currentTarget.value) }}
+            aria-label="Reference pitch for A4 in hertz"
+          />
+          <span>{song.tuning === null ? 'Hz · auto' : 'Hz'}</span>
+        </label>
         <div className="tl-zoom">
           <button type="button" className="tl-btn" onClick={() => setPxPerBar((p) => Math.max(MIN_PX, p / 1.5))} aria-label="Zoom out">−</button>
           <button

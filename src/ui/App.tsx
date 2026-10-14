@@ -28,6 +28,7 @@ import { HarmonyRow } from './HarmonyRow.tsx'
 import { generateDrift } from '../generate/generateDrift.ts'
 import { NOTE_NAMES } from '../core/theory.ts'
 import { MACRO_COLOURS } from './laneColours.ts'
+import { UndoHistory } from './undoHistory.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]
 /**
@@ -150,6 +151,14 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`
 }
 
+/** How long the document must sit still before it counts as one undoable step. */
+const SETTLE_MS = 400
+
+/** Whether two sessions are the same piece. The name is not part of it: renaming is not an edit. */
+function samePiece(a: Session, b: Session): boolean {
+  return a.macros === b.macros && a.seedName === b.seedName && a.slots === b.slots && a.song === b.song
+}
+
 export function App() {
   const initial = useMemo(loadSession, [])
   const [macros, setMacros] = useState<Macros>(initial.macros)
@@ -247,6 +256,95 @@ export function App() {
     return () => window.clearTimeout(timer)
   }, [macros, seedName, slots, song, projectName])
 
+  /**
+   * Undo history. A step is the document once it has settled: nothing changed
+   * for SETTLE_MS and no pointer is held down. Dragging a dial or drawing a
+   * curve sets state every frame, and undo should take back the gesture, not
+   * one frame of it.
+   */
+  const historyRef = useRef<UndoHistory<Session> | null>(null)
+  if (historyRef.current === null) historyRef.current = new UndoHistory(initial)
+  const history = historyRef.current
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+  const session = useMemo<Session>(
+    () => ({ macros, seedName, slots, song, projectName }),
+    [macros, seedName, slots, song, projectName],
+  )
+  const sessionRef = useRef(session)
+  sessionRef.current = session
+  const pointerDown = useRef(false)
+  /** Set by whole-session replacements, so they are a step of their own. */
+  const settleNow = useRef(false)
+
+  const settle = useCallback(() => {
+    const now = sessionRef.current
+    if (samePiece(history.current, now)) history.replace(now)
+    else history.record(now)
+    setCanUndo(history.canUndo)
+    setCanRedo(history.canRedo)
+  }, [history])
+
+  useEffect(() => {
+    if (samePiece(history.current, session)) {
+      history.replace(session)
+      settleNow.current = false
+      return
+    }
+    if (settleNow.current) {
+      settleNow.current = false
+      settle()
+      return
+    }
+    // Still dragging: the pointerup listener below settles it instead.
+    const timer = window.setTimeout(() => { if (!pointerDown.current) settle() }, SETTLE_MS)
+    return () => window.clearTimeout(timer)
+  }, [session, history, settle])
+
+  useEffect(() => {
+    // Capture phase, so a control that stops propagation cannot hide a release.
+    const down = (): void => { pointerDown.current = true }
+    const up = (): void => {
+      pointerDown.current = false
+      if (!samePiece(history.current, sessionRef.current)) settle()
+    }
+    window.addEventListener('pointerdown', down, true)
+    window.addEventListener('pointerup', up, true)
+    window.addEventListener('pointercancel', up, true)
+    return () => {
+      window.removeEventListener('pointerdown', down, true)
+      window.removeEventListener('pointerup', up, true)
+      window.removeEventListener('pointercancel', up, true)
+    }
+  }, [history, settle])
+
+  /** Puts a past state back. The playhead stays where it is: undo is not a seek. */
+  const restore = useCallback((s: Session) => {
+    setMacros(s.macros)
+    setSlots(s.slots)
+    setSong(s.song)
+    setProjectName(s.projectName)
+    if (s.seedName !== sessionRef.current.seedName) {
+      setSeedName(s.seedName)
+      player.reseed(deriveSeed(s.seedName))
+    }
+    setCanUndo(history.canUndo)
+    setCanRedo(history.canRedo)
+  }, [history, player])
+
+  const undoStep = useCallback(() => {
+    // An edit still settling is the step being undone, not one to lose.
+    if (!samePiece(history.current, sessionRef.current)) settle()
+    const previous = history.undo()
+    if (previous) restore(previous)
+  }, [history, settle, restore])
+
+  const redoStep = useCallback(() => {
+    if (!samePiece(history.current, sessionRef.current)) settle()
+    const next = history.redo()
+    if (next) restore(next)
+  }, [history, settle, restore])
+
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', accent)
   }, [accent])
@@ -310,6 +408,9 @@ export function App() {
 
   /** Replaces everything at once: what opening a file, generating and undoing share. */
   const applySession = useCallback((session: Session) => {
+    // Whatever was being edited is its own step, and so is the replacement.
+    if (!samePiece(history.current, sessionRef.current)) settle()
+    settleNow.current = true
     setMacros(session.macros)
     setSlots(session.slots)
     setSong(session.song)
@@ -321,7 +422,7 @@ export function App() {
       player.seek(0)
     }
     player.reseed(deriveSeed(session.seedName))
-  }, [player])
+  }, [player, history, settle])
 
   /**
    * A brand-new drift: new seed, dials, rack and song. It replaces the work on
@@ -457,6 +558,18 @@ export function App() {
         void saveProject()
         return
       }
+      // A text field keeps its own undo for what is being typed into it.
+      const editingText = target instanceof HTMLElement &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      if ((e.metaKey || e.ctrlKey) && !editingText) {
+        const key = e.key.toLowerCase()
+        if (key === 'z' || (key === 'y' && !e.metaKey)) {
+          e.preventDefault()
+          if (key === 'y' || e.shiftKey) redoStep()
+          else undoStep()
+          return
+        }
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault()
         void openProject()
@@ -469,7 +582,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [toggle, saveProject, openProject])
+  }, [toggle, saveProject, openProject, undoStep, redoStep])
 
   return (
     <main className="app">
@@ -487,6 +600,16 @@ export function App() {
           <span className="dot" />
           <span className="bar-count">bar {Math.floor(playhead) + 1} / {song.lengthBars}</span>
           <div className="file-actions">
+            <button type="button" onClick={undoStep} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5h7a4 4 0 0 1 0 8H7" />
+              </svg>
+            </button>
+            <button type="button" onClick={redoStep} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M10.5 3.5l3 3-3 3M13.5 6.5h-7a4 4 0 0 0 0 8H9" />
+              </svg>
+            </button>
             <button type="button" onClick={generate} title="Generate a new drift" aria-label="Generate a new drift">
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M7 2.2 8.1 5.6 11.5 6.7 8.1 7.8 7 11.2 5.9 7.8 2.5 6.7 5.9 5.6Z M12.4 10.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
@@ -547,6 +670,7 @@ export function App() {
         playhead={playhead}
         playing={playing}
         accent={accent}
+        autoTuning={patch.compose.referenceHz}
         onSongChange={setSong}
         onSlotsChange={setSlots}
         onSeek={seek}

@@ -409,6 +409,10 @@ export class Rack {
     return events.sort((a, b) => a.offset - b.offset)
   }
 
+  retune(referenceHz: number): void {
+    for (let i = 0; i < this.slots.length; i++) this.slots[i].voice.retune?.(referenceHz)
+  }
+
   fire(event: ScheduledEvent, referenceHz: number): number {
     const slot = this.slots.find((s) => s.id === event.slotId)
     if (!slot) return 0

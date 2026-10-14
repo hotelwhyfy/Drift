@@ -142,6 +142,7 @@ describe('project files', () => {
         { startBar: 0, key: null, mode: null, style: 'drift', degrees: [0, 5, 3, 4], chordBars: null, extensions: 'auto' },
         { startBar: 64, key: 9, mode: 'dorian', style: 'custom', degrees: [0, 3, 4], chordBars: 2, extensions: 'sus2' },
       ],
+      tuning: 432,
     }
     const slots = [slot({
       lanes: [{
@@ -173,11 +174,13 @@ describe('project files', () => {
           nonsense: { points: [[0, 0.5]] },
         },
         harmony: [{ startBar: 16, key: 14, mode: 'klingon', style: 'jazz', degrees: [9, 'a', 2], chordBars: 3 }, 'x'],
+        tuning: 9000,
       },
     })
     const song = readProject(bent).project.song
     expect(song.lengthBars).toBe(1)
     expect(song.end).toBe('hold')
+    expect(song.tuning).toBe(480)
     expect(Object.keys(song.macros)).toEqual(['warmth'])
     // Sorted, clamped, and the later of two points on one bar kept.
     expect(song.macros.warmth?.envelope.points).toEqual([

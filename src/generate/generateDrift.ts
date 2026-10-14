@@ -173,5 +173,5 @@ function songFor(macros: Macros, rng: Rng): Song {
     tracks[key] = { enabled: true, envelope: { points } }
   }
 
-  return { lengthBars, end: 'hold', macros: tracks, harmony: [] }
+  return { lengthBars, end: 'hold', macros: tracks, harmony: [], tuning: null }
 }

@@ -158,3 +158,39 @@ describe('the song', () => {
     expect(e.barEvents.length).toBeGreaterThan(0)
   })
 })
+
+describe('tuning', () => {
+  it('reaches notes that are already sounding, not only the next ones', () => {
+    const song: Song = { ...DEFAULT_SONG, tuning: 440 }
+    const a = engineFor(song)
+    const b = engineFor(song)
+    finishBar(a)
+    finishBar(b)
+    // The longest stretch of this bar where nothing new starts.
+    const offsets = [...a.barEvents.map((ev) => ev.offset), Infinity].sort((x, y) => x - y)
+    let from = 0
+    let to = offsets[0]
+    for (let i = 1; i < offsets.length; i++) {
+      if (offsets[i] - offsets[i - 1] > to - from) {
+        from = offsets[i - 1]
+        to = offsets[i]
+      }
+    }
+    // Past the control block that fires the last note, and short of the next.
+    const start = Math.ceil((from + 1) / 64) * 64 + 64
+    const span = Math.min(4096, Math.floor((to - start) / 64) * 64 - 64)
+    expect(span).toBeGreaterThan(1024)
+    const lead = new Float32Array(start)
+    a.render(lead, new Float32Array(start), start)
+    b.render(lead, new Float32Array(start), start)
+
+    b.setSong({ ...song, tuning: 415 })
+    const la = new Float32Array(span)
+    const lb = new Float32Array(span)
+    a.render(la, new Float32Array(span), span)
+    b.render(lb, new Float32Array(span), span)
+    let diff = 0
+    for (let i = 0; i < span; i++) diff += Math.abs(la[i] - lb[i])
+    expect(diff / span).toBeGreaterThan(1e-4)
+  })
+})

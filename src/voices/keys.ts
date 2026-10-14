@@ -40,6 +40,7 @@ class KeyVoice {
   private velocity = 0
   private panL = 0.7
   private panR = 0.7
+  private midi = -1
 
   constructor(sampleRate: number) {
     this.carrier = new Phasor(sampleRate)
@@ -53,7 +54,15 @@ class KeyVoice {
     return this.amp.active
   }
 
+  retune(referenceHz: number): void {
+    if (this.midi < 0) return
+    this.hz = midiToHz(this.midi, referenceHz)
+    this.carrier.setHz(this.hz)
+    this.modulator.setHz(this.hz * this.modRatio)
+  }
+
   start(midi: number, velocity: number, p: KeysParams, referenceHz: number, rng: Rng): void {
+    this.midi = midi
     this.hz = midiToHz(midi, referenceHz)
     this.velocity = velocity
     this.carrier.setHz(this.hz)
@@ -122,6 +131,10 @@ export class Keys {
   }
 
   /** `durationSec` schedules the release; ambient notes can ring for bars. */
+  retune(referenceHz: number): void {
+    for (let i = 0; i < this.voices.length; i++) this.voices[i].retune(referenceHz)
+  }
+
   noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {
     const voice = this.steal()
     voice.start(midi, velocity, this.params, referenceHz, this.rng)

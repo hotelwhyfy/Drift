@@ -76,6 +76,11 @@ export class Shimmer {
     this.params = p
   }
 
+  /** Grains already in flight finish at the old pitch; the next ones take the new one. */
+  retune(referenceHz: number): void {
+    for (const n of this.notes) if (n.midi >= 0) n.hz = midiToHz(n.midi, referenceHz)
+  }
+
   noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {
     const until = this.sample + durationSec * this.sampleRate
     for (const n of this.notes) {

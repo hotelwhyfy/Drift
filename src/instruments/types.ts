@@ -9,6 +9,11 @@ import type { DrumHit } from '../voices/drums.ts'
 export interface InstrumentVoice {
   /** Pitched instruments. `midi` has already been through the resolver. */
   noteOn?(midi: number, velocity: number, durationSec: number, referenceHz: number): void
+  /**
+   * Move every sounding note to a new A4. The notes stay the ones the resolver
+   * chose; only the frequency they are measured from moves.
+   */
+  retune?(referenceHz: number): void
   /** Percussive instruments. */
   hit?(kind: DrumHit, velocity: number): void
   process(out: Stereo): void

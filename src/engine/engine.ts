@@ -108,6 +108,8 @@ export class Engine {
   private levelCount = 0
   private level = 0
   private lastKick = 0
+  /** The A4 sounding notes were last tuned to, so a change reaches held notes too. */
+  private tunedTo = 0
 
   private ducked: Stereo = [0, 0]
   private clean: Stereo = [0, 0]
@@ -350,8 +352,15 @@ export class Engine {
     this.lastKick *= 0.86
 
     const blockEnd = this.samplesIntoBar + CONTROL_BLOCK
+    const referenceHz = this.song.tuning ?? this.patch.compose.referenceHz
+    if (referenceHz !== this.tunedTo) {
+      // Without this a pad held across a tuning change keeps the old pitch
+      // until it is released, which at the static end can be eight bars.
+      this.rack.retune(referenceHz)
+      this.tunedTo = referenceHz
+    }
     while (this.pendingIndex < this.pending.length && this.pending[this.pendingIndex].offset < blockEnd) {
-      const kick = this.rack.fire(this.pending[this.pendingIndex], this.patch.compose.referenceHz)
+      const kick = this.rack.fire(this.pending[this.pendingIndex], referenceHz)
       if (kick > 0) {
         this.dsp.ducker.trigger(kick)
         this.lastKick = kick

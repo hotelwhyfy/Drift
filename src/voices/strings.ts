@@ -69,6 +69,11 @@ class StringVoice {
     return this.amp.gated
   }
 
+  /** The phasors follow `hz` every sample, so moving it is enough. */
+  retune(referenceHz: number): void {
+    if (this.midi >= 0) this.hz = midiToHz(this.midi, referenceHz)
+  }
+
   start(midi: number, velocity: number, seconds: number, p: StringsParams, referenceHz: number, rng: Rng): void {
     this.midi = midi
     this.hz = midiToHz(midi, referenceHz)
@@ -148,6 +153,10 @@ export class Strings {
 
   set(p: StringsParams): void {
     this.params = p
+  }
+
+  retune(referenceHz: number): void {
+    for (let i = 0; i < this.voices.length; i++) this.voices[i].retune(referenceHz)
   }
 
   noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {

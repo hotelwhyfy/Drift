@@ -75,10 +75,18 @@ export interface Song {
   readonly macros: Partial<Record<MacroKey, MacroTrack>>
   /** Sorted by startBar. Empty means the dials decide everything. */
   readonly harmony: readonly HarmonySection[]
+  /**
+   * A4 in Hz, held for the whole song. Null leaves it to the dials, which
+   * drift it between 432 and 441 with Warmth and Colour.
+   */
+  readonly tuning: number | null
 }
 
 export const MAX_SONG_BARS = 9999
 export const CHORD_BAR_CHOICES: readonly number[] = [1, 2, 4, 8, 16]
+/** Wide enough for baroque 415 and the sharp end of orchestral practice. */
+export const MIN_TUNING = 400
+export const MAX_TUNING = 480
 
 /** A song with nothing on it behaves exactly like the endless stream. */
 export const DEFAULT_SONG: Song = {
@@ -86,6 +94,7 @@ export const DEFAULT_SONG: Song = {
   end: 'hold',
   macros: {},
   harmony: [],
+  tuning: null,
 }
 
 export function autoSection(startBar: number): HarmonySection {

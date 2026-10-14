@@ -9,7 +9,7 @@ import { instrumentById } from '../instruments/registry.ts'
 import { paramSpecOf } from '../instruments/paramSpecOf.ts'
 import type { InstrumentDef } from '../instruments/types.ts'
 import {
-  DEFAULT_SONG, MAX_SONG_BARS, BREAKPOINT_SHAPES, PROGRESSION_STYLES, EXTENSIONS,
+  DEFAULT_SONG, MAX_SONG_BARS, MIN_TUNING, MAX_TUNING, BREAKPOINT_SHAPES, PROGRESSION_STYLES, EXTENSIONS,
   CHORD_BAR_CHOICES,
 } from '../song/song.ts'
 import type { Song, Envelope, Breakpoint, MacroTrack, HarmonySection, SongEnd } from '../song/song.ts'
@@ -231,6 +231,10 @@ function readSong(raw: unknown): Song {
     end: ends.find((e) => e === record.end) ?? DEFAULT_SONG.end,
     macros,
     harmony,
+    // Absent in older files, which is the same as leaving it to the dials.
+    tuning: typeof record.tuning === 'number' && Number.isFinite(record.tuning)
+      ? num(record.tuning, 440, MIN_TUNING, MAX_TUNING)
+      : null,
   }
 }
 
@@ -340,6 +344,7 @@ function writeSong(song: Song): unknown {
     end: song.end,
     macros,
     harmony: song.harmony.map((s) => ({ ...s, degrees: [...s.degrees] })),
+    tuning: song.tuning,
   }
 }
 

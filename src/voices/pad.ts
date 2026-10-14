@@ -87,6 +87,12 @@ class PadVoice {
     return this.amp.gated
   }
 
+  retune(referenceHz: number): void {
+    if (this.midi < 0) return
+    this.hz = midiToHz(this.midi, referenceHz)
+    for (let i = 0; i < UNISON; i++) this.phasors[i].setHz(this.hz * this.detuneRatios[i])
+  }
+
   start(midi: number, velocity: number, p: PadParams, referenceHz: number, rng: Rng): void {
     this.midi = midi
     this.hz = midiToHz(midi, referenceHz)
@@ -177,6 +183,10 @@ export class Pad {
         if (this.voices[i].active) this.voices[i].place(p.width)
       }
     }
+  }
+
+  retune(referenceHz: number): void {
+    for (let i = 0; i < this.voices.length; i++) this.voices[i].retune(referenceHz)
   }
 
   noteOn(midi: number, velocity: number, durationSec: number, referenceHz: number): void {
