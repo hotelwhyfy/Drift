@@ -73,6 +73,8 @@ interface Slot extends SlotState {
   /** Expression after automation, what the rules actually saw. */
   resolved: Expression
   params: Record<string, number>
+  /** Level after lanes, before mute and solo. Reported, never read back. */
+  liveLevel: number
   /** The same, evaluated at the current bar's downbeat. Patterns read these. */
   barResolved: Expression
   barParams: Record<string, number>
@@ -149,6 +151,7 @@ export class Rack {
       fuzzy: new FuzzyEngine(def.rules),
       resolved: { ...NEUTRAL },
       params: {},
+      liveLevel: 0.8,
       barResolved: { ...NEUTRAL },
       barParams: {},
     }
@@ -210,6 +213,7 @@ export class Rack {
           fuzzy: new FuzzyEngine(def.rules),
           resolved: { ...d.expression },
           params: {},
+          liveLevel: d.level,
           barResolved: { ...d.expression },
           barParams: {},
         }
@@ -245,7 +249,7 @@ export class Rack {
         const spec = paramSpecOf(s.def, name)
         if (spec) params[name] = Math.round(normaliseParam(spec, value) * 1000) / 1000
       }
-      return { id: s.id, expression: { ...s.resolved }, level: s.level, params }
+      return { id: s.id, expression: { ...s.resolved }, level: s.liveLevel, params }
     })
   }
 
@@ -259,6 +263,7 @@ export class Rack {
       const { resolved, params, level } = this.evaluate(slot, global, ctx)
       slot.resolved = resolved
       slot.params = params
+      slot.liveLevel = level
       const audible = slot.muted || (anySolo && !slot.soloed) ? 0 : level
       slot.def.apply(slot.voice, slot.params, audible)
     }

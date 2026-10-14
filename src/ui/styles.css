@@ -436,6 +436,21 @@ button { font: inherit; }
 
 .slot-level { width: 92px; accent-color: var(--accent); }
 
+/* Where level lanes have taken the fader; the thumb stays the base. */
+.slot-level-wrap { position: relative; display: inline-flex; align-items: center; flex: none; }
+.slot-level-ghost {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 11px;
+  margin-left: -1px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 input[type="range"] {
   appearance: none;
   height: 3px;

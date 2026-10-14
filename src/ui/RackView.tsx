@@ -86,6 +86,10 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
         }
         const [xKey, yKey] = axes[slot.id] ?? ['brightness', 'weight']
         const firing = explainerFor(slot.defId)?.explain(effective, 3) ?? []
+        const readout = readouts?.find((r) => r.id === slot.id)
+        // Lanes move the level relative to the fader, so the fader stays put
+        // and a ghost shows where the automation has taken it.
+        const liveLevel = readout && Math.abs(readout.level - slot.level) > 0.01 ? readout.level : undefined
 
         return (
           <div className={`slot ${isOpen ? 'open' : ''}`} key={slot.id}>
@@ -110,16 +114,28 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
                 )}
               </button>
 
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={slot.level}
-                onChange={(e) => patch(slot.id, { level: Number(e.target.value) })}
-                aria-label={`${slot.name} level`}
-                className="slot-level"
-              />
+              <span className="slot-level-wrap">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={slot.level}
+                  onChange={(e) => patch(slot.id, { level: Number(e.target.value) })}
+                  aria-label={`${slot.name} level`}
+                  title={liveLevel === undefined
+                    ? undefined
+                    : `base ${Math.round(slot.level * 100)}% · now ${Math.round(liveLevel * 100)}%`}
+                  className="slot-level"
+                />
+                {liveLevel !== undefined && (
+                  <span
+                    className="slot-level-ghost"
+                    style={{ left: `calc(5.5px + ${liveLevel} * (100% - 11px))` }}
+                    aria-hidden="true"
+                  />
+                )}
+              </span>
               <button
                 type="button"
                 className={`slot-flag ${slot.muted ? 'on' : ''}`}
@@ -199,7 +215,7 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
                 <KnobPanel
                   def={def}
                   knobs={slot.knobs}
-                  live={readouts?.find((r) => r.id === slot.id)?.params}
+                  live={readout?.params}
                   accent={accent}
                   onChange={(knobs) => patch(slot.id, { knobs })}
                 />
