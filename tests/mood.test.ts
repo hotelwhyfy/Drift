@@ -112,6 +112,14 @@ describe('the arrangement', () => {
     }
   })
 
+  it('gives a still answer no arp and no cymbals', () => {
+    for (const answer of ['exhausted', 'calm', 'drained', 'peaceful']) {
+      const ids = rackFor(interpret(answer)).map((s) => s.defId)
+      expect(ids).not.toContain('arp')
+      expect(ids).not.toContain('cymbals')
+    }
+  })
+
   it('gives an activated answer one', () => {
     for (const answer of ['wired', 'excited', 'angry', 'energised']) {
       expect(rackFor(interpret(answer)).map((s) => s.defId)).toContain('kit')

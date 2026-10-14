@@ -78,7 +78,7 @@ const VOICES: readonly string[] = ['rhodes', 'strings', 'shimmer', 'glass']
  * and only half follow, so a dense setting fills them out without filling
  * every step.
  */
-const SPARSE: readonly string[] = ['rhodes', 'glass']
+const SPARSE: readonly string[] = ['rhodes', 'glass', 'arp']
 const SPARSE_FOLLOW = 0.5
 
 /**
@@ -90,6 +90,18 @@ function soundscapeCandidates(macros: Macros): Candidate[] {
     { defId: 'drone', chance: (0.05 + macros.space * 0.3 + macros.warmth * 0.2) * (1 - macros.pulse * 0.6) },
     { defId: 'choir', chance: 0.05 + macros.space * 0.35 + macros.drift * 0.1 },
     { defId: 'field', chance: (0.1 + macros.space * 0.3) * (1 - macros.pulse * 0.5) },
+  ]
+}
+
+/**
+ * The occasional voices: an arp that plays a run now and then, and cymbals
+ * that build into the top of a phrase. Both lean on pulse; the arp backs off
+ * as the piece drifts, and the cymbals' swells suit an open room.
+ */
+function gestureCandidates(macros: Macros): Candidate[] {
+  return [
+    { defId: 'arp', chance: (0.1 + macros.pulse * 0.35 + macros.density * 0.2) * (1 - macros.drift * 0.4) },
+    { defId: 'cymbals', chance: 0.05 + macros.space * 0.25 + macros.pulse * 0.2 },
   ]
 }
 
@@ -120,7 +132,7 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
   // Later arrivals each toss their own coin rather than drawing from the
   // shared sequence, so a seed name kept from before they existed still gets
   // exactly the room it always did, plus at most a newcomer.
-  for (const c of soundscapeCandidates(macros)) {
+  for (const c of [...soundscapeCandidates(macros), ...gestureCandidates(macros)]) {
     if (rngAt(seed, 'generate', 'rack', c.defId)() < clamp01(c.chance)) chosen.push(c.defId)
   }
 

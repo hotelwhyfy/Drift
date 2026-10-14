@@ -14,8 +14,11 @@ export interface InstrumentVoice {
    * chose; only the frequency they are measured from moves.
    */
   retune?(referenceHz: number): void
-  /** Percussive instruments. */
-  hit?(kind: DrumHit, velocity: number): void
+  /**
+   * Percussive instruments. `durationSec` is how long a gesture lasts — zero
+   * for a drum, a bar or more for a cymbal swell.
+   */
+  hit?(kind: DrumHit, velocity: number, durationSec: number): void
   process(out: Stereo): void
 }
 
@@ -23,6 +26,8 @@ export interface PercussionEvent {
   readonly step: number
   readonly kind: DrumHit
   readonly velocity: number
+  /** Sixteenths the gesture lasts, for hits that are not instantaneous. */
+  readonly lengthSteps?: number
 }
 
 export interface PatternContext {

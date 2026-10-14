@@ -405,7 +405,7 @@ export class Rack {
             slotId: slot.id,
             hit: hit.kind,
             velocity: hit.velocity,
-            durationSec: 0,
+            durationSec: ((hit.lengthSteps ?? 0) / 16) * barSec,
           })
         }
       }
@@ -424,7 +424,7 @@ export class Rack {
     if (event.midi !== undefined && slot.voice.noteOn) {
       slot.voice.noteOn(event.midi, event.velocity, event.durationSec, referenceHz)
     } else if (event.hit && slot.voice.hit) {
-      slot.voice.hit(event.hit, event.velocity)
+      slot.voice.hit(event.hit, event.velocity, event.durationSec)
       // The kick's level is reported back so the master ducker can use it
       // without the rack knowing what ducking is.
       if (event.hit === 'kick') return event.velocity

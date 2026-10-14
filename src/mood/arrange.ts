@@ -171,6 +171,29 @@ export function rackFor(reading: Reading): SlotDesc[] {
     })
   }
 
+  // Added last, so every answer keeps the instruments and lanes it always had.
+
+  // A run now and then for an answer with some life in it — never for a
+  // still one, where a sequence of notes would be the busiest thing present.
+  if (reading.arousal > 0.35 && e.motion > 0.4) {
+    choices.push({
+      defId: 'arp',
+      expression: shade(e, { density: clamp01(e.density * 0.6) }),
+      follow: 0.6,
+      level: lerp(0.4, 0.7, reading.arousal),
+    })
+  }
+
+  // Swells for an edge that wants somewhere to go, or an open, heavy room.
+  if (e.tension > 0.55 || (e.weight > 0.5 && e.density < 0.5 && reading.arousal > 0.25)) {
+    choices.push({
+      defId: 'cymbals',
+      expression: shade(e, { density: clamp01(e.density * 0.7) }),
+      follow: 0.6,
+      level: lerp(0.4, 0.75, Math.max(e.tension, e.weight)),
+    })
+  }
+
   return choices.map((choice, index) => {
     const def = instrumentById(choice.defId)
     return {

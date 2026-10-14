@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateDrift } from '../src/generate/generateDrift.ts'
 import { readProject, writeProject } from '../src/project/project.ts'
-import { instrumentById } from '../src/instruments/registry.ts'
+import { instrumentById, INSTRUMENTS } from '../src/instruments/registry.ts'
 import { MACRO_KEYS } from '../src/macros/macros.ts'
 import { EXPRESSION_KEYS } from '../src/fuzzy/expression.ts'
 
@@ -49,6 +49,13 @@ describe('generateDrift', () => {
       expect(new Set(slots.map((s) => s.id)).size).toBe(slots.length)
       for (const id of ids) expect(instrumentById(id)).toBeDefined()
     }
+  })
+
+  it('can bring every instrument there is', () => {
+    // An instrument the generator never picks is one most people never hear.
+    const seen = new Set<string>()
+    for (let i = 0; i < 200; i++) for (const s of generateDrift(`any ${i}`).slots) seen.add(s.defId)
+    for (const def of INSTRUMENTS) expect(seen).toContain(def.id)
   })
 
   it('only brings a kit when the dials have real pulse', () => {

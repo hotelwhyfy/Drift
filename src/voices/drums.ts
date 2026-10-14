@@ -6,7 +6,8 @@ import { clamp, clamp01, lerp } from '../core/curves.ts'
 import type { Rng } from '../core/rng.ts'
 import type { Stereo } from './types.ts'
 
-export type DrumHit = 'kick' | 'snare' | 'hat' | 'openHat' | 'rim'
+/** The kit's pieces, plus the cymbal gestures, which the kit ignores. */
+export type DrumHit = 'kick' | 'snare' | 'hat' | 'openHat' | 'rim' | 'swell' | 'roll'
 
 export interface DrumParams {
   /** 0..1 — lowpass on the whole kit. Low values give the dusty sampled feel. */
