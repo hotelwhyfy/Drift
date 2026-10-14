@@ -140,8 +140,12 @@ export function voiceNear(
   previous: readonly number[],
   centre: number,
 ): number[] {
+  // Follow the previous voicing, but only within half an octave of the
+  // centre. Stacking upward from wherever the last chord sat ratchets: over a
+  // long song the voicing climbed until it hit the ceiling and its notes
+  // collapsed into unisons there, leaving a chord of one pitch class.
   const target = previous.length > 0
-    ? previous.reduce((a, b) => a + b, 0) / previous.length
+    ? clamp(previous.reduce((a, b) => a + b, 0) / previous.length, centre - 6, centre + 6)
     : centre
   // Stack the chord upward from just under the previous voicing's centre,
   // each note in the lowest octave that still clears the one below it. Common
@@ -153,10 +157,15 @@ export function voiceNear(
     let p = sorted[i]
     while (p < floor) p += 12
     while (p - 12 >= floor) p -= 12
-    out.push(clamp(p, centre - 26, centre + 26))
+    out.push(p)
     floor = p + 2 // no unisons, no minor seconds at the bottom of the stack
   }
-  return out
+  // A stack that still overruns the window moves as a whole, so its notes
+  // stay distinct; clamping them one by one would fold them together.
+  while (out[out.length - 1] > centre + 26 && out[0] - 12 >= centre - 26) {
+    for (let i = 0; i < out.length; i++) out[i] -= 12
+  }
+  return out.map((p) => clamp(p, centre - 26, centre + 26))
 }
 
 /**

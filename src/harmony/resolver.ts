@@ -115,11 +115,19 @@ export class Resolver {
     // Where in the register the instrument asked to be.
     const target = register.centre + clamp(intent.contour, -1, 1) * register.span
 
-    // Nearest permitted pitch to that target, in any octave.
-    const scored = candidates
-      .map((pc) => this.nearestInOctave(pc, target))
-      .filter((p) => p >= register.centre - register.span - 6 &&
-                     p <= register.centre + register.span + 6)
+    // Nearest permitted pitch to that target, in any octave the register
+    // allows. Offering only the nearest octave of each pitch class left a third
+    // chordal instrument with nothing once two others held the chord tones
+    // nearby, though the same tones an octave away were free.
+    const low = register.centre - register.span - 6
+    const high = register.centre + register.span + 6
+    const scored: number[] = []
+    for (const pc of candidates) {
+      const nearest = this.nearestInOctave(pc, target)
+      for (let p = nearest - 24; p <= nearest + 24; p += 12) {
+        if (p >= low && p <= high) scored.push(p)
+      }
+    }
     if (scored.length === 0) return null
     scored.sort((a, b) => Math.abs(a - target) - Math.abs(b - target))
 
