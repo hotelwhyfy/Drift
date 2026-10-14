@@ -3,6 +3,7 @@ import type { ControlSpec, InstrumentDef } from '../instruments/types.ts'
 import { controlsOf } from '../instruments/controlsOf.ts'
 import { paramSpecOf } from '../instruments/paramSpecOf.ts'
 import { denormaliseParam } from '../fuzzy/denormaliseParam.ts'
+import { Tooltip } from './Tooltip.tsx'
 
 interface Props {
   def: InstrumentDef
@@ -69,12 +70,13 @@ export function KnobPanel({ def, knobs, live, accent, onChange }: Props) {
                 return (
                   <div className="knob-choice" key={control.param}>
                     <div className="knob-choice-options" role="group" aria-label={control.label}>
-                      <button
-                        type="button"
-                        className={chosen === null ? 'on' : ''}
-                        onClick={() => set(control.param, null)}
-                        title={inferred ? 'Let the dials decide' : 'The instrument’s default'}
-                      >{inferred ? 'auto' : 'default'}</button>
+                      <Tooltip content={inferred ? 'Let the dials decide' : 'The instrument’s default'}>
+                        <button
+                          type="button"
+                          className={chosen === null ? 'on' : ''}
+                          onClick={() => set(control.param, null)}
+                        >{inferred ? 'auto' : 'default'}</button>
+                      </Tooltip>
                       {options.map((option, i) => (
                         <button
                           key={option}

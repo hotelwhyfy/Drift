@@ -11,6 +11,7 @@ import type { Lane } from '../automation/lane.ts'
 import type { Expression, ExpressionKey } from '../fuzzy/expression.ts'
 import { FuzzyEngine } from '../fuzzy/inference.ts'
 import { EXPRESSION_INFO } from '../fuzzy/expression.ts'
+import { Tooltip } from './Tooltip.tsx'
 
 interface Props {
   slots: SlotDesc[]
@@ -19,10 +20,22 @@ interface Props {
   bars: number
   /** Live per-slot state from the engine, when playing. */
   readouts?: readonly SlotReadout[]
+  /** Meters move only while audio is playing; stopped, the last readout would freeze on them. */
+  metering: boolean
   onChange: (slots: SlotDesc[]) => void
 }
 
 let laneCounter = 0
+
+/** The meter's floor. Quieter than this, an instrument reads as silent. */
+const METER_FLOOR_DB = -60
+
+/** Linear amplitude → 0..1 along the meter, on a decibel scale. */
+function meterPosition(amplitude: number): number {
+  if (amplitude <= 0) return 0
+  const db = 20 * Math.log10(amplitude)
+  return Math.max(0, Math.min(1, 1 - db / METER_FLOOR_DB))
+}
 
 /** Cached per instrument definition, purely to render the firing rules. */
 const explainers = new Map<string, FuzzyEngine>()
@@ -36,7 +49,7 @@ function explainerFor(defId: string): FuzzyEngine | null {
   return engine
 }
 
-export function RackView({ slots, global, accent, bars, readouts, onChange }: Props) {
+export function RackView({ slots, global, accent, bars, readouts, metering, onChange }: Props) {
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [axes, setAxes] = useState<Record<string, [ExpressionKey, ExpressionKey]>>({})
@@ -90,6 +103,8 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
         // Lanes move the level relative to the fader, so the fader stays put
         // and a ghost shows where the automation has taken it.
         const liveLevel = readout && Math.abs(readout.level - slot.level) > 0.01 ? readout.level : undefined
+        const meterRms = metering && readout ? meterPosition(readout.rms) : 0
+        const meterPeak = metering && readout ? meterPosition(readout.peak) : 0
 
         return (
           <div className={`slot ${isOpen ? 'open' : ''}`} key={slot.id}>
@@ -103,9 +118,11 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
                 <span className={`slot-caret ${isOpen ? 'open' : ''}`} aria-hidden="true" />
                 {slot.name}
                 {Object.keys(slot.knobs).length > 0 && (
-                  <span className="slot-knobs" title="Knobs set by hand">
-                    {Object.keys(slot.knobs).length} set
-                  </span>
+                  <Tooltip content="Knobs set by hand">
+                    <span className="slot-knobs">
+                      {Object.keys(slot.knobs).length} set
+                    </span>
+                  </Tooltip>
                 )}
                 {slot.lanes.length > 0 && (
                   <span className="slot-lanes" style={{ color: accent }}>
@@ -115,19 +132,22 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
               </button>
 
               <span className="slot-level-wrap">
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={slot.level}
-                  onChange={(e) => patch(slot.id, { level: Number(e.target.value) })}
-                  aria-label={`${slot.name} level`}
-                  title={liveLevel === undefined
+                <Tooltip
+                  content={liveLevel === undefined
                     ? undefined
                     : `base ${Math.round(slot.level * 100)}% · now ${Math.round(liveLevel * 100)}%`}
-                  className="slot-level"
-                />
+                >
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={slot.level}
+                    onChange={(e) => patch(slot.id, { level: Number(e.target.value) })}
+                    aria-label={`${slot.name} level`}
+                    className="slot-level"
+                  />
+                </Tooltip>
                 {liveLevel !== undefined && (
                   <span
                     className="slot-level-ghost"
@@ -135,6 +155,12 @@ export function RackView({ slots, global, accent, bars, readouts, onChange }: Pr
                     aria-hidden="true"
                   />
                 )}
+                <span className="slot-meter" aria-hidden="true">
+                  <span className="slot-meter-fill" style={{ transform: `scaleX(${meterRms})` }} />
+                  {meterPeak > 0 && (
+                    <span className="slot-meter-peak" style={{ left: `${meterPeak * 100}%` }} />
+                  )}
+                </span>
               </span>
               <button
                 type="button"

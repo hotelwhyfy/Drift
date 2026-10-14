@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dial } from './Dial.tsx'
+import { Tooltip } from './Tooltip.tsx'
 import { SeedField } from './SeedField.tsx'
 import { Visualizer } from './Visualizer.tsx'
 import { Player } from '../audio/player.ts'
@@ -29,6 +30,7 @@ import { generateDrift } from '../generate/generateDrift.ts'
 import { NOTE_NAMES } from '../core/theory.ts'
 import { MACRO_COLOURS } from './laneColours.ts'
 import { UndoHistory } from './undoHistory.ts'
+import { released } from './released.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]
 /**
@@ -308,13 +310,18 @@ export function App() {
       pointerDown.current = false
       if (!samePiece(history.current, sessionRef.current)) settle()
     }
+    // A release that never arrived would otherwise hold the undo step open
+    // until the next click.
+    const move = (e: PointerEvent): void => { if (pointerDown.current && released(e)) up() }
     window.addEventListener('pointerdown', down, true)
     window.addEventListener('pointerup', up, true)
     window.addEventListener('pointercancel', up, true)
+    window.addEventListener('pointermove', move, true)
     return () => {
       window.removeEventListener('pointerdown', down, true)
       window.removeEventListener('pointerup', up, true)
       window.removeEventListener('pointercancel', up, true)
+      window.removeEventListener('pointermove', move, true)
     }
   }, [history, settle])
 
@@ -600,31 +607,41 @@ export function App() {
           <span className="dot" />
           <span className="bar-count">bar {Math.floor(playhead) + 1} / {song.lengthBars}</span>
           <div className="file-actions">
-            <button type="button" onClick={undoStep} disabled={!canUndo} title="Undo (⌘Z)" aria-label="Undo">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5h7a4 4 0 0 1 0 8H7" />
-              </svg>
-            </button>
-            <button type="button" onClick={redoStep} disabled={!canRedo} title="Redo (⇧⌘Z)" aria-label="Redo">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M10.5 3.5l3 3-3 3M13.5 6.5h-7a4 4 0 0 0 0 8H9" />
-              </svg>
-            </button>
-            <button type="button" onClick={generate} title="Generate a new drift" aria-label="Generate a new drift">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M7 2.2 8.1 5.6 11.5 6.7 8.1 7.8 7 11.2 5.9 7.8 2.5 6.7 5.9 5.6Z M12.4 10.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
-              </svg>
-            </button>
-            <button type="button" onClick={() => void openProject()} title="Open project (⌘O)" aria-label="Open project">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M1.5 12.5V4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1Z" />
-              </svg>
-            </button>
-            <button type="button" onClick={() => void saveProject()} title="Save project (⌘S)" aria-label="Save project">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 1.8v8.4M4.6 7l3.4 3.4L11.4 7M2.2 12.6v1.1a.6.6 0 0 0 .6.6h10.4a.6.6 0 0 0 .6-.6v-1.1" />
-              </svg>
-            </button>
+            <Tooltip content={<>Undo<kbd>⌘Z</kbd></>}>
+              <button type="button" onClick={undoStep} disabled={!canUndo} aria-label="Undo">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5h7a4 4 0 0 1 0 8H7" />
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip content={<>Redo<kbd>⇧⌘Z</kbd></>}>
+              <button type="button" onClick={redoStep} disabled={!canRedo} aria-label="Redo">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M10.5 3.5l3 3-3 3M13.5 6.5h-7a4 4 0 0 0 0 8H9" />
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip content="Generate a new drift">
+              <button type="button" onClick={generate} aria-label="Generate a new drift">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M7 2.2 8.1 5.6 11.5 6.7 8.1 7.8 7 11.2 5.9 7.8 2.5 6.7 5.9 5.6Z M12.4 10.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip content={<>Open project<kbd>⌘O</kbd></>}>
+              <button type="button" onClick={() => void openProject()} aria-label="Open project">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M1.5 12.5V4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1Z" />
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip content={<>Save project<kbd>⌘S</kbd></>}>
+              <button type="button" onClick={() => void saveProject()} aria-label="Save project">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M8 1.8v8.4M4.6 7l3.4 3.4L11.4 7M2.2 12.6v1.1a.6.6 0 0 0 .6.6h10.4a.6.6 0 0 0 .6-.6v-1.1" />
+                </svg>
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>
@@ -648,15 +665,16 @@ export function App() {
                 onChange={(v) => setMacro(info.key, v)}
               />
               {driven && (
-                <button
-                  type="button"
-                  className="dial-unlink"
-                  onClick={() => unlinkMacro(info.key)}
-                  title="The song is driving this dial. Turning it writes into the song at the playhead; click to take it back."
-                >
-                  <span className="tl-swatch" style={{ borderColor: MACRO_COLOURS[info.key], background: MACRO_COLOURS[info.key] }} />
-                  on timeline ×
-                </button>
+                <Tooltip content="The song is driving this dial. Turning it writes into the song at the playhead; click to take it back.">
+                  <button
+                    type="button"
+                    className="dial-unlink"
+                    onClick={() => unlinkMacro(info.key)}
+                  >
+                    <span className="tl-swatch" style={{ borderColor: MACRO_COLOURS[info.key], background: MACRO_COLOURS[info.key] }} />
+                    on timeline ×
+                  </button>
+                </Tooltip>
               )}
             </div>
           )
@@ -694,6 +712,7 @@ export function App() {
         accent={accent}
         bars={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
         readouts={snapshot?.slots}
+        metering={playing}
         onChange={setSlots}
       />
 
@@ -725,14 +744,15 @@ export function App() {
 
         <div className="capture">
           <div className="lengths" role="group" aria-label="Capture length">
-            <button
-              type="button"
-              className={captureLength === 'song' ? 'on' : ''}
-              onClick={() => setCaptureLength('song')}
-              title={`The song once through, ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')} plus its tail`}
-            >
-              song
-            </button>
+            <Tooltip content={`The song once through, ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')} plus its tail`}>
+              <button
+                type="button"
+                className={captureLength === 'song' ? 'on' : ''}
+                onClick={() => setCaptureLength('song')}
+              >
+                song
+              </button>
+            </Tooltip>
             {CAPTURE_LENGTHS.map((m) => (
               <button
                 key={m}
@@ -743,33 +763,34 @@ export function App() {
                 {m}m
               </button>
             ))}
-            <label
-              className={`length-custom ${typeof captureLength === 'number' && !CAPTURE_LENGTHS.includes(captureLength) ? 'on' : ''}`}
-              title={`Any length up to ${MAX_CAPTURE_MINUTES} minutes`}
-            >
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="…"
-                aria-label="Capture length in minutes"
-                value={minutesDraft}
-                onChange={(e) => {
-                  setMinutesDraft(e.target.value)
-                  const m = parseMinutes(e.target.value)
-                  if (m !== null) setCaptureLength(m)
-                }}
-                onBlur={() => {
-                  // Show what will actually be captured, once clamped and rounded.
-                  const m = parseMinutes(minutesDraft)
-                  setMinutesDraft(m === null || CAPTURE_LENGTHS.includes(m) ? '' : String(m))
-                  if (m !== null) setCaptureLength(m)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.currentTarget.blur()
-                }}
-              />
-              m
-            </label>
+            <Tooltip content={`Any length up to ${MAX_CAPTURE_MINUTES} minutes`}>
+              <label
+                className={`length-custom ${typeof captureLength === 'number' && !CAPTURE_LENGTHS.includes(captureLength) ? 'on' : ''}`}
+              >
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="…"
+                  aria-label="Capture length in minutes"
+                  value={minutesDraft}
+                  onChange={(e) => {
+                    setMinutesDraft(e.target.value)
+                    const m = parseMinutes(e.target.value)
+                    if (m !== null) setCaptureLength(m)
+                  }}
+                  onBlur={() => {
+                    // Show what will actually be captured, once clamped and rounded.
+                    const m = parseMinutes(minutesDraft)
+                    setMinutesDraft(m === null || CAPTURE_LENGTHS.includes(m) ? '' : String(m))
+                    if (m !== null) setCaptureLength(m)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                  }}
+                />
+                m
+              </label>
+            </Tooltip>
           </div>
           <button
             className="capture-go"

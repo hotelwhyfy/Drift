@@ -192,6 +192,7 @@ export class Engine {
     this.peak = 0
     this.rmsAcc = 0
     this.rmsCount = 0
+    this.rack.resetMeters()
   }
 
   /** The events scheduled for the current bar. For tests and diagnostics. */

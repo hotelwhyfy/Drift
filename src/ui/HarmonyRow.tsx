@@ -5,6 +5,8 @@ import { MODES, NOTE_NAMES } from '../core/theory.ts'
 import type { Mode } from '../core/theory.ts'
 import type { BarScale } from './barScale.ts'
 import { romanNumeral } from './romanNumeral.ts'
+import { Tooltip } from './Tooltip.tsx'
+import { released } from './released.ts'
 
 interface Props {
   song: Song
@@ -76,68 +78,74 @@ export function HarmonyRow({ song, scale, width, playhead, dialMode, accent, onC
         <div className="tl-label">
           <span className={`tl-toggle ${sections.length > 0 ? 'on' : ''}`}>harmony</span>
         </div>
-        <div
-          className="tl-track harmony-track"
-          style={{ width }}
-          onPointerDown={(e) => {
-            if (e.target !== e.currentTarget) return
-            const rect = e.currentTarget.getBoundingClientRect()
-            add(scale.toBar(e.clientX - rect.left))
-          }}
-          onPointerMove={(e) => {
-            if (dragging === null) return
-            const rect = e.currentTarget.getBoundingClientRect()
-            const bar = Math.max(0, Math.round(scale.toBar(e.clientX - rect.left)))
-            const prev = sections[dragging - 1]
-            const next = sections[dragging + 1]
-            const lo = prev ? prev.startBar + 1 : 0
-            const hi = next ? next.startBar - 1 : Number.MAX_SAFE_INTEGER
-            const start = Math.min(hi, Math.max(lo, bar))
-            if (start !== sections[dragging].startBar) update(dragging, { startBar: start })
-          }}
-          onPointerUp={() => setDragging(null)}
-          title={sections.length === 0 ? 'Click to give this stretch of the song its own key, mode or progression' : undefined}
-        >
-          {sections.length === 0 && <span className="harmony-empty">the dials decide · click to add a section</span>}
-          {sections.map((section, i) => {
-            const left = scale.toX(section.startBar)
-            const end = sections[i + 1]?.startBar ?? Math.max(song.lengthBars, section.startBar + 1)
-            const right = scale.toX(end)
-            if (right < 0 || left > width) return null
-            return (
-              <button
-                key={`${section.startBar}-${i}`}
-                type="button"
-                className={`harmony-block ${selected === i ? 'on' : ''}`}
-                style={{ left: Math.max(0, left), width: Math.max(4, right - Math.max(0, left) - 1), borderColor: selected === i ? accent : undefined }}
-                onClick={() => setSelected(i)}
-                onDoubleClick={(e) => {
-                  const track = e.currentTarget.parentElement
-                  if (!track) return
-                  add(scale.toBar(e.clientX - track.getBoundingClientRect().left))
-                }}
-                title="Click to edit · double-click to split here"
-              >
-                <span
-                  className="harmony-edge"
-                  onPointerDown={(e) => {
-                    e.stopPropagation()
-                    const track = e.currentTarget.closest('.harmony-track')
-                    if (track instanceof HTMLElement) track.setPointerCapture(e.pointerId)
-                    setDragging(i)
-                  }}
-                />
-                {describe(section)}
-              </button>
-            )
-          })}
-          {(() => {
-            const x = scale.toX(playhead)
-            return x >= 0 && x <= width
-              ? <span className="harmony-playhead" style={{ left: x, background: accent }} />
-              : null
-          })()}
-        </div>
+        <Tooltip content={sections.length === 0 ? 'Click to give this stretch of the song its own key, mode or progression' : undefined}>
+          <div
+            className="tl-track harmony-track"
+            style={{ width }}
+            onPointerDown={(e) => {
+              if (e.target !== e.currentTarget) return
+              const rect = e.currentTarget.getBoundingClientRect()
+              add(scale.toBar(e.clientX - rect.left))
+            }}
+            onPointerMove={(e) => {
+              if (dragging === null) return
+              if (released(e)) {
+                setDragging(null)
+                return
+              }
+              const rect = e.currentTarget.getBoundingClientRect()
+              const bar = Math.max(0, Math.round(scale.toBar(e.clientX - rect.left)))
+              const prev = sections[dragging - 1]
+              const next = sections[dragging + 1]
+              const lo = prev ? prev.startBar + 1 : 0
+              const hi = next ? next.startBar - 1 : Number.MAX_SAFE_INTEGER
+              const start = Math.min(hi, Math.max(lo, bar))
+              if (start !== sections[dragging].startBar) update(dragging, { startBar: start })
+            }}
+            onPointerUp={() => setDragging(null)}
+            onPointerCancel={() => setDragging(null)}
+          >
+            {sections.length === 0 && <span className="harmony-empty">the dials decide · click to add a section</span>}
+            {sections.map((section, i) => {
+              const left = scale.toX(section.startBar)
+              const end = sections[i + 1]?.startBar ?? Math.max(song.lengthBars, section.startBar + 1)
+              const right = scale.toX(end)
+              if (right < 0 || left > width) return null
+              return (
+                <Tooltip key={`${section.startBar}-${i}`} content="Click to edit · double-click to split here">
+                  <button
+                    type="button"
+                    className={`harmony-block ${selected === i ? 'on' : ''}`}
+                    style={{ left: Math.max(0, left), width: Math.max(4, right - Math.max(0, left) - 1), borderColor: selected === i ? accent : undefined }}
+                    onClick={() => setSelected(i)}
+                    onDoubleClick={(e) => {
+                      const track = e.currentTarget.parentElement
+                      if (!track) return
+                      add(scale.toBar(e.clientX - track.getBoundingClientRect().left))
+                    }}
+                  >
+                    <span
+                      className="harmony-edge"
+                      onPointerDown={(e) => {
+                        e.stopPropagation()
+                        const track = e.currentTarget.closest('.harmony-track')
+                        if (track instanceof HTMLElement) track.setPointerCapture(e.pointerId)
+                        setDragging(i)
+                      }}
+                    />
+                    {describe(section)}
+                  </button>
+                </Tooltip>
+              )
+            })}
+            {(() => {
+              const x = scale.toX(playhead)
+              return x >= 0 && x <= width
+                ? <span className="harmony-playhead" style={{ left: x, background: accent }} />
+                : null
+            })()}
+          </div>
+        </Tooltip>
       </div>
 
       {current && selected !== null && (
@@ -173,7 +181,9 @@ export function HarmonyRow({ song, scale, width, playhead, dialMode, accent, onC
             <span className="hp-label">chords</span>
             <div className="tl-seg">
               {PROGRESSION_STYLES.map((style) => (
-                <button key={style} type="button" title={STYLE_HINTS[style]} className={current.style === style ? 'on' : ''} onClick={() => update(selected, { style })}>{style}</button>
+                <Tooltip key={style} content={STYLE_HINTS[style]}>
+                  <button type="button" className={current.style === style ? 'on' : ''} onClick={() => update(selected, { style })}>{style}</button>
+                </Tooltip>
               ))}
             </div>
             <span className="hp-hint">{STYLE_HINTS[current.style]}</span>
@@ -183,13 +193,13 @@ export function HarmonyRow({ song, scale, width, playhead, dialMode, accent, onC
               <span className="hp-label">sequence</span>
               <div className="hp-degrees">
                 {current.degrees.map((d, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="hp-degree"
-                    title="Remove"
-                    onClick={() => update(selected, { degrees: current.degrees.filter((_, j) => j !== i) })}
-                  >{romanNumeral(mode, d)}</button>
+                  <Tooltip key={i} content="Remove">
+                    <button
+                      type="button"
+                      className="hp-degree"
+                      onClick={() => update(selected, { degrees: current.degrees.filter((_, j) => j !== i) })}
+                    >{romanNumeral(mode, d)}</button>
+                  </Tooltip>
                 ))}
               </div>
               <span className="hp-hint">add</span>

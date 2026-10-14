@@ -4,6 +4,7 @@ import { BREAKPOINT_SHAPES } from '../song/song.ts'
 import { sampleEnvelope } from '../song/sampleEnvelope.ts'
 import type { BarScale } from './barScale.ts'
 import { gridStep } from './gridStep.ts'
+import { released } from './released.ts'
 
 interface Props {
   envelope: Envelope
@@ -191,7 +192,8 @@ export function EnvelopeLane({
       onPointerMove={(e) => {
         const { x, y } = local(e)
         const d = drag.current
-        if (d) moveTo(d.index, x, y, e.altKey)
+        if (d && released(e)) drag.current = null
+        else if (d) moveTo(d.index, x, y, e.altKey)
         else {
           const h = hit(x, y)
           setHover(h >= 0 ? h : null)

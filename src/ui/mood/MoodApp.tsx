@@ -17,6 +17,7 @@ import type { Macros, MacroKey } from '../../macros/macros.ts'
 import { buildPatch, expressionFor, modeNameAt } from '../../macros/patch.ts'
 import type { SlotDesc } from '../../engine/rack.ts'
 import type { EngineSnapshot } from '../../engine/engine.ts'
+import { Tooltip } from '../Tooltip.tsx'
 
 type Phase = 'opening' | 'playing'
 
@@ -148,9 +149,11 @@ export function MoodApp() {
 
       <section className="mood-centre">
         {reading && (
-          <p className="mood-echo" title={arrangement ? `${arrangement.slots.length} instruments` : undefined}>
-            “{reading.text}”
-          </p>
+          <Tooltip content={arrangement ? `${arrangement.slots.length} instruments` : undefined}>
+            <p className="mood-echo">
+              “{reading.text}”
+            </p>
+          </Tooltip>
         )}
 
         <div className="mood-state">
@@ -175,12 +178,14 @@ export function MoodApp() {
         </button>
 
         {steering && (
-          <div className="mood-journey" title="Easing toward something calmer">
-            <div className="mood-journey-bar">
-              <span style={{ width: `${progress * 100}%`, background: accent }} />
+          <Tooltip content="Easing toward something calmer">
+            <div className="mood-journey">
+              <div className="mood-journey-bar">
+                <span style={{ width: `${progress * 100}%`, background: accent }} />
+              </div>
+              <span className="mood-journey-label">settling</span>
             </div>
-            <span className="mood-journey-label">settling</span>
-          </div>
+          </Tooltip>
         )}
       </section>
 
@@ -215,6 +220,8 @@ export function MoodApp() {
             global={expressionFor(macros)}
             accent={accent}
             bars={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
+            readouts={snapshot?.slots}
+            metering={playing}
             onChange={changeSlots}
           />
         </section>

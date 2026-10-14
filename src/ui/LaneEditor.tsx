@@ -5,6 +5,7 @@ import type { Point } from '../automation/curve.ts'
 import { EXPRESSION_INFO, EXPRESSION_KEYS } from '../fuzzy/expression.ts'
 import type { InstrumentDef } from '../instruments/types.ts'
 import { controlsOf } from '../instruments/controlsOf.ts'
+import { released } from './released.ts'
 
 interface Props {
   lane: Lane
@@ -212,6 +213,11 @@ export function LaneEditor({ lane, def, accent, phase, onChange, onRemove }: Pro
         }}
         onPointerMove={(e) => {
           if (!stroke) return
+          if (released(e)) {
+            commit(stroke)
+            setStroke(null)
+            return
+          }
           setStroke([...stroke, pointFrom(e)])
         }}
         onPointerUp={(e) => {

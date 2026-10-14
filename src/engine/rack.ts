@@ -62,6 +62,10 @@ export interface SlotReadout {
   readonly id: string
   readonly expression: Expression
   readonly level: number
+  /** Loudest sample since the last readout, after level, mute and solo. */
+  readonly peak: number
+  /** RMS over the same span. Both are the instrument's dry contribution, before the room. */
+  readonly rms: number
   /** Every parameter, normalised 0..1 — what an untouched knob would read. */
   readonly params: Readonly<Record<string, number>>
 }
@@ -78,6 +82,10 @@ interface Slot extends SlotState {
   /** The same, evaluated at the current bar's downbeat. Patterns read these. */
   barResolved: Expression
   barParams: Record<string, number>
+  /** Meter accumulators, reset by each readout. Measured, never read back into the audio. */
+  meterPeak: number
+  meterSq: number
+  meterCount: number
 }
 
 export interface ScheduledEvent {
@@ -154,6 +162,9 @@ export class Rack {
       liveLevel: 0.8,
       barResolved: { ...NEUTRAL },
       barParams: {},
+      meterPeak: 0,
+      meterSq: 0,
+      meterCount: 0,
     }
     if (at === undefined) this.slots.push(slot)
     else this.slots.splice(at, 0, slot)
@@ -216,6 +227,9 @@ export class Rack {
           liveLevel: d.level,
           barResolved: { ...d.expression },
           barParams: {},
+          meterPeak: 0,
+          meterSq: 0,
+          meterCount: 0,
         }
       } else {
         slot.name = d.name
@@ -249,7 +263,12 @@ export class Rack {
         const spec = paramSpecOf(s.def, name)
         if (spec) params[name] = Math.round(normaliseParam(spec, value) * 1000) / 1000
       }
-      return { id: s.id, expression: { ...s.resolved }, level: s.liveLevel, params }
+      const rms = s.meterCount > 0 ? Math.sqrt(s.meterSq / s.meterCount) : 0
+      const peak = s.meterPeak
+      s.meterPeak = 0
+      s.meterSq = 0
+      s.meterCount = 0
+      return { id: s.id, expression: { ...s.resolved }, level: s.liveLevel, peak, rms, params }
     })
   }
 
@@ -295,6 +314,15 @@ export class Rack {
   resetVoices(): void {
     for (const slot of this.slots) {
       slot.voice = slot.def.create(this.sampleRate, createRng(deriveSeed(this.seed, slot.id)))
+    }
+  }
+
+  /** Forget what the meters have gathered, so a seek's pre-roll is never shown. */
+  resetMeters(): void {
+    for (const slot of this.slots) {
+      slot.meterPeak = 0
+      slot.meterSq = 0
+      slot.meterCount = 0
     }
   }
 
@@ -439,6 +467,10 @@ export class Rack {
       acc[0] = 0
       acc[1] = 0
       slot.voice.process(acc)
+      const a = Math.max(Math.abs(acc[0]), Math.abs(acc[1]))
+      if (a > slot.meterPeak) slot.meterPeak = a
+      slot.meterSq += acc[0] * acc[0] + acc[1] * acc[1]
+      slot.meterCount += 2
       // Percussion and surface noise sit outside the sidechain: a kick cannot
       // duck itself, and crackle that pumps on every beat is instantly wrong.
       const target = slot.def.hits || slot.def.unducked ? unducked : duckable

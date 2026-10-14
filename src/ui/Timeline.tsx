@@ -15,6 +15,8 @@ import { gridStep } from './gridStep.ts'
 import { EnvelopeLane } from './EnvelopeLane.tsx'
 import { MACRO_COLOURS, INSTRUMENT_LANE_COLOURS } from './laneColours.ts'
 import { deriveSeed } from '../core/rng.ts'
+import { Tooltip } from './Tooltip.tsx'
+import { released } from './released.ts'
 
 /** Keyed by the lane's id, so removing one lane never repaints the others. */
 const laneColour = (id: string): string =>
@@ -78,6 +80,19 @@ export function Timeline({
   const rulerRef = useRef<HTMLCanvasElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const draggingEnd = useRef(false)
+  /** A ruler drag let go: an end drag just stops, a scrub seeks to where it was left. */
+  const finishRuler = (): void => {
+    if (draggingEnd.current) {
+      draggingEnd.current = false
+      return
+    }
+    if (scrub !== null) {
+      // Seeking on release rather than on every move: each seek
+      // renders a bar of preroll, and a drag would queue dozens.
+      onSeek(Math.max(0, Math.min(song.end === 'hold' ? MAX_SONG_BARS : song.lengthBars - 1, scrub)))
+      setScrub(null)
+    }
+  }
   // The wheel listener is registered once; it reads the view through these.
   const view = useRef({ pxPerBar, startBar })
   view.current = { pxPerBar, startBar }
@@ -280,7 +295,9 @@ export function Timeline({
           />
           <span>bars · {formatDuration(seconds)}</span>
         </label>
-        <button type="button" className="tl-btn" onClick={() => setLength(song.lengthBars + 16)} title="Add sixteen bars">+16</button>
+        <Tooltip content="Add sixteen bars">
+          <button type="button" className="tl-btn" onClick={() => setLength(song.lengthBars + 16)}>+16</button>
+        </Tooltip>
         <div className="tl-seg" role="group" aria-label="At the end">
           {ENDS.map((end) => (
             <button
@@ -291,37 +308,41 @@ export function Timeline({
             >{end}</button>
           ))}
         </div>
-        <label className="tl-length" title="Concert pitch for the whole song. Leave empty and the dials drift it between 432 and 441.">
-          <span>A4</span>
-          <input
-            type="number"
-            min={MIN_TUNING}
-            max={MAX_TUNING}
-            step={0.5}
-            placeholder={autoTuning.toFixed(1)}
-            value={tuningDraft ?? (song.tuning === null ? '' : String(song.tuning))}
-            onChange={(e) => setTuningDraft(e.target.value)}
-            onBlur={(e) => setTuning(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') setTuning(e.currentTarget.value) }}
-            aria-label="Reference pitch for A4 in hertz"
-          />
-          <span>{song.tuning === null ? 'Hz · auto' : 'Hz'}</span>
-        </label>
+        <Tooltip content="Concert pitch for the whole song. Leave empty and the dials drift it between 432 and 441.">
+          <label className="tl-length">
+            <span>A4</span>
+            <input
+              type="number"
+              min={MIN_TUNING}
+              max={MAX_TUNING}
+              step={0.5}
+              placeholder={autoTuning.toFixed(1)}
+              value={tuningDraft ?? (song.tuning === null ? '' : String(song.tuning))}
+              onChange={(e) => setTuningDraft(e.target.value)}
+              onBlur={(e) => setTuning(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') setTuning(e.currentTarget.value) }}
+              aria-label="Reference pitch for A4 in hertz"
+            />
+            <span>{song.tuning === null ? 'Hz · auto' : 'Hz'}</span>
+          </label>
+        </Tooltip>
         <div className="tl-zoom">
           <button type="button" className="tl-btn" onClick={() => setPxPerBar((p) => Math.max(MIN_PX, p / 1.5))} aria-label="Zoom out">−</button>
-          <button
-            type="button"
-            className="tl-btn"
-            onClick={() => { setPxPerBar(Math.max(MIN_PX, Math.min(MAX_PX, width / (song.lengthBars + 1)))); setStartBar(0) }}
-            title="Fit the whole song"
-          >fit</button>
+          <Tooltip content="Fit the whole song">
+            <button
+              type="button"
+              className="tl-btn"
+              onClick={() => { setPxPerBar(Math.max(MIN_PX, Math.min(MAX_PX, width / (song.lengthBars + 1)))); setStartBar(0) }}
+            >fit</button>
+          </Tooltip>
           <button type="button" className="tl-btn" onClick={() => setPxPerBar((p) => Math.min(MAX_PX, p * 1.5))} aria-label="Zoom in">+</button>
-          <button
-            type="button"
-            className={`tl-btn ${follow ? 'on' : ''}`}
-            onClick={() => setFollow((f) => !f)}
-            title="Keep the playhead in view. Scrolling away turns it off"
-          >follow</button>
+          <Tooltip content="Keep the playhead in view. Scrolling away turns it off">
+            <button
+              type="button"
+              className={`tl-btn ${follow ? 'on' : ''}`}
+              onClick={() => setFollow((f) => !f)}
+            >follow</button>
+          </Tooltip>
         </div>
       </div>
 
@@ -344,21 +365,16 @@ export function Timeline({
                 setScrub(Math.floor(rulerBar(e)))
               }}
               onPointerMove={(e) => {
+                if ((draggingEnd.current || scrub !== null) && released(e)) {
+                  finishRuler()
+                  return
+                }
                 if (draggingEnd.current) setLength(Math.max(1, Math.round(rulerBar(e))))
                 else if (scrub !== null) setScrub(Math.max(0, Math.floor(rulerBar(e))))
               }}
               onPointerUp={(e) => {
                 e.currentTarget.releasePointerCapture(e.pointerId)
-                if (draggingEnd.current) {
-                  draggingEnd.current = false
-                  return
-                }
-                if (scrub !== null) {
-                  // Seeking on release rather than on every move: each seek
-                  // renders a bar of preroll, and a drag would queue dozens.
-                  onSeek(Math.max(0, Math.min(song.end === 'hold' ? MAX_SONG_BARS : song.lengthBars - 1, scrub)))
-                  setScrub(null)
-                }
+                finishRuler()
               }}
             />
           </div>
@@ -373,28 +389,29 @@ export function Timeline({
           return (
             <div className="tl-row" key={info.key}>
               <div className="tl-label">
-                <button
-                  type="button"
-                  className={`tl-toggle ${enabled && envelope.points.length > 0 ? 'on' : ''}`}
-                  onClick={() => {
-                    if (!track || envelope.points.length === 0) {
-                      // Switching on an empty track starts it where the dial is.
-                      setTrack(info.key, { enabled: true, envelope: { points: [{ bar: 0, value: dials[info.key], shape: 'linear' }] } })
-                    } else {
-                      setTrack(info.key, { ...track, enabled: !track.enabled })
-                    }
-                  }}
-                  title={enabled ? 'The song drives this dial — click to hand it back' : 'Let the song drive this dial'}
-                >
-                  <span
-                    className="tl-swatch"
-                    style={{
-                      borderColor: MACRO_COLOURS[info.key],
-                      background: enabled && envelope.points.length > 0 ? MACRO_COLOURS[info.key] : 'transparent',
+                <Tooltip content={enabled ? 'The song drives this dial — click to hand it back' : 'Let the song drive this dial'}>
+                  <button
+                    type="button"
+                    className={`tl-toggle ${enabled && envelope.points.length > 0 ? 'on' : ''}`}
+                    onClick={() => {
+                      if (!track || envelope.points.length === 0) {
+                        // Switching on an empty track starts it where the dial is.
+                        setTrack(info.key, { enabled: true, envelope: { points: [{ bar: 0, value: dials[info.key], shape: 'linear' }] } })
+                      } else {
+                        setTrack(info.key, { ...track, enabled: !track.enabled })
+                      }
                     }}
-                  />
-                  {info.label.toLowerCase()}
-                </button>
+                  >
+                    <span
+                      className="tl-swatch"
+                      style={{
+                        borderColor: MACRO_COLOURS[info.key],
+                        background: enabled && envelope.points.length > 0 ? MACRO_COLOURS[info.key] : 'transparent',
+                      }}
+                    />
+                    {info.label.toLowerCase()}
+                  </button>
+                </Tooltip>
                 {envelope.points.length > 0 && (
                   <button type="button" className="tl-clear" onClick={() => setTrack(info.key, undefined)} aria-label={`Clear ${info.label} track`}>×</button>
                 )}
@@ -420,21 +437,22 @@ export function Timeline({
         {songLanes.map(({ slot, lane }) => (
           <div className="tl-row" key={lane.id}>
             <div className="tl-label">
-              <button
-                type="button"
-                className={`tl-toggle ${lane.enabled && lane.source.envelope.points.length > 0 ? 'on' : ''}`}
-                onClick={() => setSlotLane(slot.id, lane.id, { ...lane, enabled: !lane.enabled })}
-                title={`${slot.name} ${targetLabel(slot, lane)}`}
-              >
-                <span
-                  className="tl-swatch"
-                  style={{
-                    borderColor: laneColour(lane.id),
-                    background: lane.enabled && lane.source.envelope.points.length > 0 ? laneColour(lane.id) : 'transparent',
-                  }}
-                />
-                <span className="tl-slot">{slot.name.toLowerCase()}</span> {targetLabel(slot, lane)}
-              </button>
+              <Tooltip content={`${slot.name} ${targetLabel(slot, lane)}`}>
+                <button
+                  type="button"
+                  className={`tl-toggle ${lane.enabled && lane.source.envelope.points.length > 0 ? 'on' : ''}`}
+                  onClick={() => setSlotLane(slot.id, lane.id, { ...lane, enabled: !lane.enabled })}
+                >
+                  <span
+                    className="tl-swatch"
+                    style={{
+                      borderColor: laneColour(lane.id),
+                      background: lane.enabled && lane.source.envelope.points.length > 0 ? laneColour(lane.id) : 'transparent',
+                    }}
+                  />
+                  <span className="tl-slot">{slot.name.toLowerCase()}</span> {targetLabel(slot, lane)}
+                </button>
+              </Tooltip>
               <button type="button" className="tl-clear" onClick={() => setSlotLane(slot.id, lane.id, null)} aria-label="Remove lane">×</button>
             </div>
             <div className="tl-track">

@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import { released } from './released.ts'
 
 interface DialProps {
   label: string
@@ -50,23 +51,27 @@ export function Dial({
     [value],
   )
 
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+  }, [])
+
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       const d = dragging.current
       if (!d) return
+      if (released(e)) {
+        onPointerUp(e)
+        return
+      }
       // Shift gives a ten-times finer gesture, which is the difference between
       // "somewhere near there" and actually placing a value.
       const scale = e.shiftKey ? 0.0006 : 0.006
       const next = Math.min(1, Math.max(0, d.start + (d.y - e.clientY) * scale))
       onChange(next)
     },
-    [onChange],
+    [onChange, onPointerUp],
   )
-
-  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    dragging.current = null
-    e.currentTarget.releasePointerCapture(e.pointerId)
-  }, [])
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -108,6 +113,7 @@ export function Dial({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onLostPointerCapture={onPointerUp}
         onKeyDown={onKeyDown}
         onDoubleClick={() => (onReset ? onReset() : onChange(0.5))}
         style={size === DEFAULT_SIZE ? undefined : { width: size, height: size }}

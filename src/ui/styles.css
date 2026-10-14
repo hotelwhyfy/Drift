@@ -434,7 +434,7 @@ button { font: inherit; }
 .slot-caret.open { transform: rotate(90deg); }
 .slot-lanes { font-size: 10px; font-variant-numeric: tabular-nums; }
 
-.slot-level { width: 92px; accent-color: var(--accent); }
+.slot-level { width: 92px; margin: 0; accent-color: var(--accent); }
 
 /* Where level lanes have taken the fader; the thumb stays the base. */
 .slot-level-wrap { position: relative; display: inline-flex; align-items: center; flex: none; }
@@ -449,6 +449,38 @@ button { font: inherit; }
   background: var(--accent);
   opacity: 0.45;
   pointer-events: none;
+}
+
+/* What each instrument is putting into the mix, dry, before the room. Spans
+   exactly the fader's track — the input has no margin, so its box is the track. */
+.slot-meter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: #ffffff16;
+  overflow: hidden;
+  pointer-events: none;
+}
+.slot-meter-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--accent);
+  opacity: 0.7;
+  transition: transform 120ms linear;
+}
+.slot-meter-peak {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -2px;
+  background: var(--ink);
+  opacity: 0.6;
+  transition: left 120ms linear;
 }
 
 input[type="range"] {
@@ -787,6 +819,45 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
+}
+
+/*
+ * The toast's quieter sibling: same lifted surface and shadow, smaller type,
+ * and a hairline of accent on the side facing its anchor so it reads as
+ * belonging to the control rather than floating free.
+ */
+.tooltip {
+  position: fixed;
+  z-index: 110;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--bg-lift);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
+  color: var(--ink-dim);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: tooltip-in 140ms ease-out;
+}
+
+.tooltip[data-side="top"] { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), inset 0 -1px 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+.tooltip[data-side="bottom"] { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), inset 0 1px 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+
+.tooltip kbd {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip { animation: none; }
 }
 
 /* ── Instrument knobs ───────────────────────────────────────────────────── */

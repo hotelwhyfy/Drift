@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react'
 import type { ExpressionKey } from '../fuzzy/expression.ts'
 import { EXPRESSION_INFO } from '../fuzzy/expression.ts'
+import { released } from './released.ts'
 
 interface Props {
   xKey: ExpressionKey
@@ -68,11 +69,16 @@ export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAx
           e.currentTarget.setPointerCapture(e.pointerId)
           fromEvent(e)
         }}
-        onPointerMove={(e) => { if (dragging.current) fromEvent(e) }}
+        onPointerMove={(e) => {
+          if (!dragging.current) return
+          if (released(e)) dragging.current = false
+          else fromEvent(e)
+        }}
         onPointerUp={(e) => {
           dragging.current = false
           e.currentTarget.releasePointerCapture(e.pointerId)
         }}
+        onPointerCancel={() => { dragging.current = false }}
       >
         <span className="xy-end xy-top">{yHigh}</span>
         <span className="xy-end xy-bottom">{yLow}</span>
