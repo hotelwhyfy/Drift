@@ -48,8 +48,11 @@ const rhodes: InstrumentDef = {
       tremolo: { min: 0, max: 0.36 },
       tremoloHz: { min: 2.6, max: 7, scale: 'exp' },
       spread: { min: 0.2, max: 0.9 },
-      rate: { min: 0.7, max: 7 },
-      rest: { min: 0.05, max: 0.7 },
+      // Notes wanted per bar; under a half rounds to none, so the bottom of
+      // the dial is a silent bar rather than one note every bar.
+      rate: { min: 0, max: 5 },
+      // The chance each of those notes is dropped.
+      rest: { min: 0.05, max: 0.85 },
     },
     rules: [
       { when: { brightness: 'high' }, then: { tone: 'high', bite: 'high' } },
@@ -63,6 +66,7 @@ const rhodes: InstrumentDef = {
       { when: { tension: 'high' }, then: { bite: 'high', spread: 'low' } },
       { when: { tension: 'low' }, then: { spread: 'high' } },
       { when: { density: 'high' }, then: { rate: 'high', rest: 'low', decay: 'low' } },
+      { when: { density: 'mid' }, then: { rate: 'mid', rest: 'mid' } },
       { when: { density: 'low' }, then: { rate: 'low', rest: 'high', decay: 'high' } },
       // Sparse and still together means long, hanging notes — the two dials
       // reinforcing each other rather than averaging out.
@@ -1148,14 +1152,17 @@ const field: InstrumentDef = {
 function intentsFor(ctx: PatternContext, role: 'melodic'): NoteIntent[] {
   const rate = ctx.params.rate ?? 3
   const rest = clamp01(ctx.params.rest ?? 0.3)
-  const want = Math.max(0, Math.round(rate))
+  const want = Math.max(0, Math.min(16, Math.round(rate)))
   // Strong positions first, so thinning out leaves a skeleton that still
   // swings rather than a random scatter.
   const order = [0, 8, 4, 12, 6, 14, 2, 10, 3, 11, 7, 15, 1, 9, 5, 13]
   const out: NoteIntent[] = []
   let previous = 0
-  for (let i = 0; i < order.length && out.length < want; i++) {
-    if (ctx.rng() < rest * 0.6) continue
+  for (let i = 0; i < want; i++) {
+    // A rest drops the note outright. It used to skip to the next position
+    // and keep looking, which moved notes about but never removed one, so no
+    // setting of the dial could make a bar sparser than its note count.
+    if (ctx.rng() < rest) continue
     const step = order[i]
     // Contour wanders by small amounts, so the line has direction rather than
     // jumping around its register.
