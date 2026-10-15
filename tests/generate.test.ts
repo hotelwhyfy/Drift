@@ -65,14 +65,17 @@ describe('generateDrift', () => {
     }
   })
 
-  it('gives the song an arc on two or three dials, never warmth', () => {
+  it('gives the song an arc on two or three dials', () => {
+    const seen = new Set<string>()
     for (const name of NAMES) {
       const { song } = generateDrift(name)
       const driven = Object.keys(song.macros)
       expect(driven.length).toBeGreaterThanOrEqual(2)
       expect(driven.length).toBeLessThanOrEqual(3)
-      expect(driven).not.toContain('warmth')
+      for (const key of driven) seen.add(key)
     }
+    // Every dial can arc, Warmth included; it was once left out.
+    expect([...seen].sort()).toEqual([...MACRO_KEYS].sort())
   })
 
   it('survives a save and open unchanged and without warnings', () => {

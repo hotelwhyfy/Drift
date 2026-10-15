@@ -190,9 +190,12 @@ function breathFor(defId: string, rng: Rng, sparse: boolean): Lane {
   }
 }
 
-/** The dials worth moving across a song. Warmth is left alone: it is tape
- *  and room, and a room that changes halfway through sounds like a mistake. */
-const ARC_KEYS: readonly MacroKey[] = ['density', 'drift', 'colour', 'space', 'pulse']
+/**
+ * The dials a song may move. All six: Warmth's arc darkens and loosens the
+ * tape over the piece, a natural lo-fi move. It never changes the key, though
+ * it does nudge the tuning reference by a few cents along the way.
+ */
+const ARC_KEYS: readonly MacroKey[] = ['density', 'drift', 'colour', 'space', 'pulse', 'warmth']
 
 /**
  * A song with an arc: two or three dials rise (or fall) toward a point past the
