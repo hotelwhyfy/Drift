@@ -12,12 +12,19 @@ import type { Expression, ExpressionKey } from '../fuzzy/expression.ts'
 import { FuzzyEngine } from '../fuzzy/inference.ts'
 import { EXPRESSION_INFO } from '../fuzzy/expression.ts'
 import { Tooltip } from './Tooltip.tsx'
+import { songLaneFor } from '../automation/songLaneFor.ts'
+import { drivenValue } from '../automation/drivenValue.ts'
+import { recordInto } from '../automation/recordInto.ts'
+import { automationColour } from './automationColour.ts'
+import type { CSSProperties } from 'react'
 
 interface Props {
   slots: SlotDesc[]
   global: Expression
   accent: string
   bars: number
+  /** Where moves to a control driven by a timeline lane are written. */
+  playhead: number
   /** Live per-slot state from the engine, when playing. */
   readouts?: readonly SlotReadout[]
   /** Meters move only while audio is playing; stopped, the last readout would freeze on them. */
@@ -49,7 +56,7 @@ function explainerFor(defId: string): FuzzyEngine | null {
   return engine
 }
 
-export function RackView({ slots, global, accent, bars, readouts, metering, onChange }: Props) {
+export function RackView({ slots, global, accent, bars, readouts, metering, playhead, onChange }: Props) {
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [axes, setAxes] = useState<Record<string, [ExpressionKey, ExpressionKey]>>({})
@@ -100,9 +107,28 @@ export function RackView({ slots, global, accent, bars, readouts, metering, onCh
         const [xKey, yKey] = axes[slot.id] ?? ['brightness', 'weight']
         const firing = explainerFor(slot.defId)?.explain(effective, 3) ?? []
         const readout = readouts?.find((r) => r.id === slot.id)
-        // Lanes move the level relative to the fader, so the fader stays put
-        // and a ghost shows where the automation has taken it.
-        const liveLevel = readout && Math.abs(readout.level - slot.level) > 0.01 ? readout.level : undefined
+        // A timeline level lane drives the fader: it shows the lane and a move
+        // records into it, the way the six dials do. Under looped and
+        // generated lanes the fader is the base, and a ghost shows where the
+        // automation has taken it.
+        const levelLane = songLaneFor(slot.lanes, (t) => t.kind === 'level')
+        const shownLevel = levelLane ? drivenValue(levelLane, slot.level, playhead) : slot.level
+        const liveLevel = readout && Math.abs(readout.level - shownLevel) > 0.01 ? readout.level : undefined
+        const levelAutomated = automationColour(slot.lanes, (t) => t.kind === 'level', accent)
+        // The thumb reads --accent; overriding it on the input repaints just
+        // the fader in its automation's colour, and leaves the meter alone.
+        const levelStyle: (CSSProperties & { '--accent': string }) | undefined =
+          levelAutomated ? { '--accent': levelAutomated } : undefined
+        const axisAutomation: Partial<Record<ExpressionKey, string>> = {}
+        for (const info of EXPRESSION_INFO) {
+          const c = automationColour(slot.lanes, (t) => t.kind === 'expression' && t.key === info.key, accent)
+          if (c) axisAutomation[info.key] = c
+        }
+        const levelTip = levelLane
+          ? `following its timeline lane${liveLevel === undefined ? '' : ` · now ${Math.round(liveLevel * 100)}%`}`
+          : liveLevel === undefined
+            ? levelAutomated ? 'automated' : undefined
+            : `automated · base ${Math.round(slot.level * 100)}% · now ${Math.round(liveLevel * 100)}%`
         const meterRms = metering && readout ? meterPosition(readout.rms) : 0
         const meterPeak = metering && readout ? meterPosition(readout.peak) : 0
 
@@ -132,26 +158,30 @@ export function RackView({ slots, global, accent, bars, readouts, metering, onCh
               </button>
 
               <span className="slot-level-wrap">
-                <Tooltip
-                  content={liveLevel === undefined
-                    ? undefined
-                    : `base ${Math.round(slot.level * 100)}% · now ${Math.round(liveLevel * 100)}%`}
-                >
+                {levelAutomated && (
+                  <span className="automated-dot slot-level-dot" style={{ background: levelAutomated }} aria-hidden="true" />
+                )}
+                <Tooltip content={levelTip}>
                   <input
                     type="range"
                     min={0}
                     max={1}
                     step={0.01}
-                    value={slot.level}
-                    onChange={(e) => patch(slot.id, { level: Number(e.target.value) })}
-                    aria-label={`${slot.name} level`}
+                    value={shownLevel}
+                    onChange={(e) => {
+                      const v = Number(e.target.value)
+                      if (levelLane) patch(slot.id, { lanes: recordInto(slot.lanes, levelLane, slot.level, v, playhead) })
+                      else patch(slot.id, { level: v })
+                    }}
+                    aria-label={`${slot.name} level${levelAutomated ? ', automated' : ''}`}
                     className="slot-level"
+                    style={levelStyle}
                   />
                 </Tooltip>
                 {liveLevel !== undefined && (
                   <span
                     className="slot-level-ghost"
-                    style={{ left: `calc(5.5px + ${liveLevel} * (100% - 11px))` }}
+                    style={{ left: `calc(5.5px + ${liveLevel} * (100% - 11px))`, background: levelAutomated }}
                     aria-hidden="true"
                   />
                 )}
@@ -195,6 +225,7 @@ export function RackView({ slots, global, accent, bars, readouts, metering, onCh
                     accent={accent}
                     ghostX={effective[xKey]}
                     ghostY={effective[yKey]}
+                    automated={axisAutomation}
                     onChange={(x, y) => setExpression(slot, {
                       ...slot.expression, [xKey]: x, [yKey]: y,
                     })}
@@ -241,6 +272,9 @@ export function RackView({ slots, global, accent, bars, readouts, metering, onCh
                 <KnobPanel
                   def={def}
                   knobs={slot.knobs}
+                  lanes={slot.lanes}
+                  playhead={playhead}
+                  onLanesChange={(lanes) => patch(slot.id, { lanes })}
                   live={readout?.params}
                   accent={accent}
                   onChange={(knobs) => patch(slot.id, { knobs })}

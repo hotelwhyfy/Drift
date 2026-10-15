@@ -13,14 +13,12 @@ import { barScale } from './barScale.ts'
 import type { BarScale } from './barScale.ts'
 import { gridStep } from './gridStep.ts'
 import { EnvelopeLane } from './EnvelopeLane.tsx'
-import { MACRO_COLOURS, INSTRUMENT_LANE_COLOURS } from './laneColours.ts'
-import { deriveSeed } from '../core/rng.ts'
+import { MACRO_COLOURS } from './laneColours.ts'
+import { laneColour } from './laneColour.ts'
 import { Tooltip } from './Tooltip.tsx'
 import { released } from './released.ts'
-
-/** Keyed by the lane's id, so removing one lane never repaints the others. */
-const laneColour = (id: string): string =>
-  INSTRUMENT_LANE_COLOURS[deriveSeed(id) % INSTRUMENT_LANE_COLOURS.length]
+import { Select } from './Select.tsx'
+import type { SelectGroup } from './Select.tsx'
 
 interface Props {
   song: Song
@@ -474,26 +472,24 @@ export function Timeline({
 
         <div className="tl-row">
           <div className="tl-label">
-            <select
+            <Select
               className="tl-add"
-              value=""
-              onChange={(e) => addSlotLane(e.target.value)}
-              aria-label="Add an automation lane to the timeline"
-            >
-              <option value="">+ automation lane</option>
-              {slots.map((slot) => {
+              value={null}
+              placeholder="+ automation lane"
+              items={slots.flatMap((slot): SelectGroup<string>[] => {
                 const def = instrumentById(slot.defId)
-                if (!def) return null
-                return (
-                  <optgroup key={slot.id} label={slot.name}>
-                    <option value={`${slot.id}|level`}>level</option>
-                    {controlsOf(def).map((c) => (
-                      <option key={c.param} value={`${slot.id}|${c.param}`}>{c.label.toLowerCase()}</option>
-                    ))}
-                  </optgroup>
-                )
+                if (!def) return []
+                return [{
+                  group: slot.name,
+                  options: [
+                    { value: `${slot.id}|level`, label: 'level' },
+                    ...controlsOf(def).map((c) => ({ value: `${slot.id}|${c.param}`, label: c.label.toLowerCase() })),
+                  ],
+                }]
               })}
-            </select>
+              onChange={addSlotLane}
+              label="Add an automation lane to the timeline"
+            />
           </div>
           <div className="tl-track" />
         </div>

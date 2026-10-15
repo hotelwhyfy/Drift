@@ -21,6 +21,12 @@ interface DialProps {
   onReset?: () => void
   /** Replaces the percentage readout. */
   display?: string
+  /**
+   * Automation is acting on this dial: its colour. The arc takes it and a dot
+   * sits in the gap at the foot of the travel, so the dial says so whether or
+   * not the automation has moved it yet.
+   */
+  automated?: string
 }
 
 const DEFAULT_SIZE = 84
@@ -36,8 +42,9 @@ const SWEEP = 0.76
  * someone is listening rather than looking.
  */
 export function Dial({
-  label, low, high, value, accent, onChange, size = DEFAULT_SIZE, ghost, auto, onReset, display,
+  label, low, high, value, accent, onChange, size = DEFAULT_SIZE, ghost, auto, onReset, display, automated,
 }: DialProps) {
+  const colour = automated ?? accent
   const SIZE = size
   const R = size * (32 / 84)
   const CIRC = 2 * Math.PI * R
@@ -108,7 +115,7 @@ export function Dial({
         aria-valuenow={Math.round(value * 100)}
         aria-valuetext={low && high
           ? `${label} ${Math.round(value * 100)} percent, between ${low} and ${high}`
-          : `${label} ${display ?? `${Math.round(value * 100)} percent`}${auto ? ', automatic' : ''}`}
+          : `${label} ${display ?? `${Math.round(value * 100)} percent`}${auto ? ', automatic' : ''}${automated ? ', automated' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -132,7 +139,7 @@ export function Dial({
               cx={SIZE / 2}
               cy={SIZE / 2}
               r={R}
-              stroke={accent}
+              stroke={colour}
               strokeOpacity={auto ? 0.35 : 1}
               strokeDasharray={`${filled} ${CIRC}`}
             />
@@ -142,11 +149,14 @@ export function Dial({
                 cx={SIZE / 2}
                 cy={SIZE / 2}
                 r={R - 5}
-                stroke={accent}
+                stroke={colour}
                 strokeDasharray={`${arc * Math.min(1, Math.max(0, ghost))} ${CIRC}`}
               />
             )}
           </g>
+          {automated && (
+            <circle className="dial-automated" cx={SIZE / 2} cy={SIZE / 2 + R} r={Math.max(2, size / 28)} fill={automated} />
+          )}
         </svg>
         <span className={`dial-value ${auto ? 'auto' : ''}`}>{display ?? Math.round(value * 100)}</span>
       </div>

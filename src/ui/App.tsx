@@ -713,6 +713,7 @@ export function App() {
         bars={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
         readouts={snapshot?.slots}
         metering={playing}
+        playhead={playhead}
         onChange={setSlots}
       />
 

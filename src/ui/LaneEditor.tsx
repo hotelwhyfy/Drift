@@ -1,11 +1,25 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
-import type { Lane } from '../automation/lane.ts'
+import type { Lane, LaneSource } from '../automation/lane.ts'
 import { curveFromStroke, CURVE_RESOLUTION } from '../automation/curve.ts'
 import type { Point } from '../automation/curve.ts'
 import { EXPRESSION_INFO, EXPRESSION_KEYS } from '../fuzzy/expression.ts'
 import type { InstrumentDef } from '../instruments/types.ts'
 import { controlsOf } from '../instruments/controlsOf.ts'
 import { released } from './released.ts'
+import { Select } from './Select.tsx'
+import type { SelectOption } from './Select.tsx'
+
+/** Follow lanes can't be made here, only kept: one is listed only while the lane is one. */
+const sourceOptions = (following: boolean): SelectOption<LaneSource['kind']>[] => {
+  const options: SelectOption<LaneSource['kind']>[] = [
+    { value: 'curve', label: 'drawn' },
+    { value: 'lfo', label: 'lfo' },
+    { value: 'walk', label: 'walk' },
+    { value: 'song', label: 'timeline' },
+  ]
+  if (following) options.push({ value: 'follow', label: 'follow' })
+  return options
+}
 
 interface Props {
   lane: Lane
@@ -121,10 +135,19 @@ export function LaneEditor({ lane, def, accent, phase, onChange, onRemove }: Pro
   return (
     <div className="lane">
       <div className="lane-head">
-        <select
+        <Select
           value={lane.target.kind === 'expression' ? `e:${lane.target.key}` : lane.target.kind === 'level' ? 'level' : `p:${lane.target.param}`}
-          onChange={(e) => {
-            const v = e.target.value
+          items={[
+            { group: 'Character', options: EXPRESSION_INFO.map((i) => ({ value: `e:${i.key}`, label: i.label })) },
+            {
+              group: def.name,
+              options: [
+                { value: 'level', label: 'Level' },
+                ...controlsOf(def).map((c) => ({ value: `p:${c.param}`, label: c.label })),
+              ],
+            },
+          ]}
+          onChange={(v) => {
             if (v === 'level') onChange({ ...lane, target: { kind: 'level' } })
             else if (v.startsWith('p:')) onChange({ ...lane, target: { kind: 'param', param: v.slice(2) } })
             else {
@@ -132,43 +155,25 @@ export function LaneEditor({ lane, def, accent, phase, onChange, onRemove }: Pro
               if (key) onChange({ ...lane, target: { kind: 'expression', key } })
             }
           }}
-          aria-label="Automation target"
-        >
-          <optgroup label="Character">
-            {EXPRESSION_INFO.map((i) => (
-              <option key={i.key} value={`e:${i.key}`}>{i.label}</option>
-            ))}
-          </optgroup>
-          <optgroup label={def.name}>
-            <option value="level">Level</option>
-            {controlsOf(def).map((c) => (
-              <option key={c.param} value={`p:${c.param}`}>{c.label}</option>
-            ))}
-          </optgroup>
-        </select>
+          label="Automation target"
+        />
 
-        <select
+        <Select
           value={lane.source.kind}
-          onChange={(e) => {
-            const kind = e.target.value
+          items={sourceOptions(lane.source.kind === 'follow')}
+          onChange={(kind) => {
             if (kind === 'curve') {
               onChange({ ...lane, source: { kind: 'curve', curve: curveFromStroke([{ x: 0, y: 0.5 }, { x: 1, y: 0.5 }]) } })
             } else if (kind === 'song') {
               onChange({ ...lane, source: { kind: 'song', envelope: { points: [] } } })
             } else if (kind === 'walk') {
               onChange({ ...lane, source: { kind: 'walk', smoothness: 0.7, seed: Math.floor(Math.random() * 1e9) } })
-            } else {
+            } else if (kind === 'lfo') {
               onChange({ ...lane, source: { kind: 'lfo', shape: 'sine', bars: lane.bars, phase: 0 } })
             }
           }}
-          aria-label="Automation source"
-        >
-          <option value="curve">drawn</option>
-          <option value="lfo">lfo</option>
-          <option value="walk">walk</option>
-          <option value="song">timeline</option>
-          {lane.source.kind === 'follow' && <option value="follow">follow</option>}
-        </select>
+          label="Automation source"
+        />
 
         {lane.source.kind !== 'song' && <BarsField
           bars={lane.bars}

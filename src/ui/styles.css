@@ -451,6 +451,26 @@ button { font: inherit; }
   pointer-events: none;
 }
 
+/* Automation is acting on a control. Colour is never the only cue: every
+   automated control carries this mark as well as its lane's colour. */
+.automated-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+  flex: none;
+}
+.slot-level-dot {
+  /* In the row's 8px gap, just before the track. */
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%);
+}
+
 /* What each instrument is putting into the mix, dry, before the room. Spans
    exactly the fader's track — the input has no margin, so its box is the track. */
 .slot-meter {
@@ -570,19 +590,89 @@ input[type="range"]::-webkit-slider-thumb {
 .xy-left { left: 5px; top: 50%; transform: translateY(-50%); }
 .xy-right { right: 5px; top: 50%; transform: translateY(-50%); }
 
-select {
+/* ── Select ─────────────────────────────────────────────────────────────── */
+/* The trigger sits quietly with the other small controls; the list opens on
+   the lifted background the tooltips use, with headed groups. */
+.select {
   appearance: none;
-  background: #ffffff08;
   border: none;
+  background: #ffffff08;
   color: var(--ink-dim);
   font: inherit;
   font-size: 10.5px;
-  padding: 3px 7px;
+  line-height: 1.4;
+  padding: 3px 6px 3px 7px;
   border-radius: 5px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.select:hover, .select.open { background: #ffffff12; color: var(--ink); }
+.select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.select .automated-dot { margin-right: 0; }
+.select-value { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.select-chevron {
+  width: 8px;
+  height: 5px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+  transition: transform 120ms ease-out;
+}
+.select.open .select-chevron { transform: rotate(180deg); }
+
+.select-list {
+  position: fixed;
+  z-index: 120;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--bg-lift);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #ffffff0a;
+  font-size: 11px;
+  line-height: 1.4;
+  animation: tooltip-in 120ms ease-out;
+}
+.select-list::-webkit-scrollbar { width: 6px; }
+.select-list::-webkit-scrollbar-thumb { background: #ffffff18; border-radius: 3px; }
+.select-group {
+  padding: 7px 8px 3px 22px;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.select-list > [role="group"]:first-child .select-group { padding-top: 3px; }
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 5px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.select-option.active { background: #ffffff10; color: var(--ink); }
+.select-option.chosen { color: var(--ink); }
+.select-check { width: 10px; flex: none; color: var(--accent); font-size: 10px; text-align: center; }
+.select-option .automated-dot { margin-right: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .select-list { animation: none; }
+  .select-chevron { transition: none; }
 }
 
-.xy-axis { display: flex; justify-content: center; }
+.xy-axis { display: flex; justify-content: center; align-items: center; gap: 4px; }
 
 /* ── Words ──────────────────────────────────────────────────────────────── */
 .word form { display: flex; gap: 5px; }
@@ -1041,7 +1131,16 @@ select {
 }
 
 .tl-clear:hover { color: var(--ink); }
-.tl-add { width: 100%; font-size: 10px; }
+.tl-add {
+  /* Sized to its words, not squeezed into the label column: the track
+     beside it is empty, so it may run into it rather than clip. Lifted, so
+     the track that follows it cannot take the clicks on the part that runs over. */
+  position: relative;
+  z-index: 1;
+  flex: none;
+  max-width: none;
+  font-size: 10px;
+}
 
 .tl-scroll {
   margin-left: var(--tl-label);

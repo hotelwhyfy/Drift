@@ -4,6 +4,11 @@ import { controlsOf } from '../instruments/controlsOf.ts'
 import { paramSpecOf } from '../instruments/paramSpecOf.ts'
 import { denormaliseParam } from '../fuzzy/denormaliseParam.ts'
 import { Tooltip } from './Tooltip.tsx'
+import type { Lane } from '../automation/lane.ts'
+import { songLaneFor } from '../automation/songLaneFor.ts'
+import { drivenValue } from '../automation/drivenValue.ts'
+import { recordInto } from '../automation/recordInto.ts'
+import { automationColour } from './automationColour.ts'
 
 interface Props {
   def: InstrumentDef
@@ -13,7 +18,21 @@ interface Props {
   live?: Readonly<Record<string, number>>
   accent: string
   onChange: (knobs: Record<string, number>) => void
+  /** The slot's lanes; a timeline lane on a parameter drives its knob. */
+  lanes: readonly Lane[]
+  /** Where a driven knob's moves are written. */
+  playhead: number
+  onLanesChange: (lanes: Lane[]) => void
 }
+
+/**
+ * A driven knob with no hand-set value has, as its true base, whatever the
+ * rules inferred before lanes, which the interface never sees. It is treated
+ * as a full-depth set lane instead: exact for every lane the timeline makes,
+ * and only approximate for a partial-depth, add or scale lane over an
+ * untouched knob.
+ */
+const AS_SET: Pick<Lane, 'mode' | 'depth'> = { mode: 'set', depth: 1 }
 
 /** Which option an enumerated parameter's normalised value lands on. */
 function optionIndex(def: InstrumentDef, control: ControlSpec, norm: number): number {
@@ -32,7 +51,7 @@ function optionIndex(def: InstrumentDef, control: ControlSpec, norm: number): nu
  * moment someone wants one thing exactly, and then only that one thing stops
  * listening to them.
  */
-export function KnobPanel({ def, knobs, live, accent, onChange }: Props) {
+export function KnobPanel({ def, knobs, live, accent, onChange, lanes, playhead, onLanesChange }: Props) {
   const controls = controlsOf(def)
   const groups: { name: string; controls: ControlSpec[] }[] = []
   for (const c of controls) {
@@ -59,6 +78,7 @@ export function KnobPanel({ def, knobs, live, accent, onChange }: Props) {
           <div className="knob-row">
             {group.controls.map((control) => {
               const own = knobs[control.param]
+              const automated = automationColour(lanes, (t) => t.kind === 'param' && t.param === control.param, accent)
               const now = live?.[control.param]
               const options = control.options
               // Rule outputs follow the dials when untouched; fixed parameters
@@ -69,7 +89,7 @@ export function KnobPanel({ def, knobs, live, accent, onChange }: Props) {
                 const current = now === undefined ? null : optionIndex(def, control, now)
                 return (
                   <div className="knob-choice" key={control.param}>
-                    <div className="knob-choice-options" role="group" aria-label={control.label}>
+                    <div className="knob-choice-options" role="group" aria-label={automated ? `${control.label}, automated` : control.label}>
                       <Tooltip content={inferred ? 'Let the dials decide' : 'The instrument’s default'}>
                         <button
                           type="button"
@@ -86,20 +106,33 @@ export function KnobPanel({ def, knobs, live, accent, onChange }: Props) {
                         >{option}</button>
                       ))}
                     </div>
-                    <div className="dial-label">{control.label}</div>
+                    <div className="dial-label">
+                      {automated && <span className="automated-dot" style={{ background: automated }} aria-hidden="true" />}
+                      {control.label}
+                    </div>
                   </div>
                 )
               }
+              const driver = songLaneFor(lanes, (t) => t.kind === 'param' && t.param === control.param)
+              const lane = driver && own === undefined ? { ...driver, ...AS_SET } : driver
+              const base = own ?? 0.5
+              const shown = lane ? drivenValue(lane, base, playhead) : own ?? now ?? 0.5
               return (
                 <Dial
                   key={control.param}
                   label={control.label}
                   size={50}
-                  value={own ?? now ?? 0.5}
-                  ghost={own === undefined ? undefined : now}
-                  auto={own === undefined}
+                  value={shown}
+                  ghost={own === undefined && !lane ? undefined : now}
+                  auto={own === undefined && !lane}
                   accent={accent}
-                  onChange={(v) => set(control.param, v)}
+                  automated={automated}
+                  onChange={(v) => {
+                    // Only the envelope is replaced, so the real lane keeps
+                    // its own mode and depth.
+                    if (lane) onLanesChange(recordInto(lanes, lane, base, v, playhead))
+                    else set(control.param, v)
+                  }}
                   onReset={() => set(control.param, null)}
                 />
               )

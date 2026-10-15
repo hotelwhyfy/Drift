@@ -222,6 +222,7 @@ export function MoodApp() {
             bars={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
             readouts={snapshot?.slots}
             metering={playing}
+            playhead={(snapshot?.bar ?? 0) + (snapshot?.barPhase ?? 0)}
             onChange={changeSlots}
           />
         </section>

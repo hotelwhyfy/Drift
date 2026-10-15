@@ -2,6 +2,8 @@ import { useCallback, useRef } from 'react'
 import type { ExpressionKey } from '../fuzzy/expression.ts'
 import { EXPRESSION_INFO } from '../fuzzy/expression.ts'
 import { released } from './released.ts'
+import { Select } from './Select.tsx'
+import type { SelectOption } from './Select.tsx'
 
 interface Props {
   xKey: ExpressionKey
@@ -14,10 +16,20 @@ interface Props {
   accent: string
   onChange: (x: number, y: number) => void
   onAxisChange: (axis: 'x' | 'y', key: ExpressionKey) => void
+  /** Dimensions automation is acting on, with its colour. */
+  automated: Partial<Record<ExpressionKey, string>>
 }
 
 const label = (k: ExpressionKey): string =>
   EXPRESSION_INFO.find((i) => i.key === k)?.label ?? k
+/** Automated dimensions are marked in the menu too, so one off the pad is still findable. */
+const axisOptions = (automated: Partial<Record<ExpressionKey, string>>): SelectOption<ExpressionKey>[] =>
+  EXPRESSION_INFO.map((i) => ({
+    value: i.key,
+    label: i.label,
+    mark: automated[i.key],
+    note: automated[i.key] ? 'automated' : undefined,
+  }))
 const ends = (k: ExpressionKey): [string, string] => {
   const info = EXPRESSION_INFO.find((i) => i.key === k)
   return [info?.low ?? '', info?.high ?? '']
@@ -31,7 +43,7 @@ const ends = (k: ExpressionKey): [string, string] => {
  * motion for a kit. Fixing the axes would have made this a preset rather than
  * a control.
  */
-export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAxisChange }: Props) {
+export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAxisChange, automated }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
@@ -51,13 +63,12 @@ export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAx
   return (
     <div className="xy">
       <div className="xy-axis xy-axis-y">
-        <select
+        <Select
           value={yKey}
-          onChange={(e) => onAxisChange('y', e.target.value as ExpressionKey)}
-          aria-label="Vertical axis"
-        >
-          {EXPRESSION_INFO.map((i) => <option key={i.key} value={i.key}>{i.label}</option>)}
-        </select>
+          items={axisOptions(automated)}
+          onChange={(key) => onAxisChange('y', key)}
+          label="Vertical axis"
+        />
       </div>
       <div
         className="xy-field"
@@ -99,13 +110,12 @@ export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAx
         />
       </div>
       <div className="xy-axis xy-axis-x">
-        <select
+        <Select
           value={xKey}
-          onChange={(e) => onAxisChange('x', e.target.value as ExpressionKey)}
-          aria-label="Horizontal axis"
-        >
-          {EXPRESSION_INFO.map((i) => <option key={i.key} value={i.key}>{i.label}</option>)}
-        </select>
+          items={axisOptions(automated)}
+          onChange={(key) => onAxisChange('x', key)}
+          label="Horizontal axis"
+        />
       </div>
     </div>
   )
