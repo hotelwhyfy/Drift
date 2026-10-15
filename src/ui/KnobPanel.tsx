@@ -117,6 +117,8 @@ export function KnobPanel({ def, knobs, live, accent, onChange, lanes, playhead,
               const lane = driver && own === undefined ? { ...driver, ...AS_SET } : driver
               const base = own ?? 0.5
               const shown = lane ? drivenValue(lane, base, playhead) : own ?? now ?? 0.5
+              const spec = paramSpecOf(def, control.param)
+              const display = control.display && spec ? control.display(denormaliseParam(spec, shown)) : undefined
               return (
                 <Dial
                   key={control.param}
@@ -134,6 +136,7 @@ export function KnobPanel({ def, knobs, live, accent, onChange, lanes, playhead,
                     else set(control.param, v)
                   }}
                   onReset={() => set(control.param, null)}
+                  display={display}
                 />
               )
             })}

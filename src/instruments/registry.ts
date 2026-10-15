@@ -48,10 +48,10 @@ const rhodes: InstrumentDef = {
       tremolo: { min: 0, max: 0.36 },
       tremoloHz: { min: 2.6, max: 7, scale: 'exp' },
       spread: { min: 0.2, max: 0.9 },
-      // Notes wanted per bar; under a half rounds to none, so the bottom of
-      // the dial is a silent bar rather than one note every bar.
-      rate: { min: 0, max: 5 },
-      // The chance each of those notes is dropped.
+      // Key presses per minute, at random moments. Exponential, so most of
+      // the dial is the sparse end: the middle is one every ~13 s.
+      rate: { min: 0.75, max: 30, scale: 'exp' },
+      // The chance each of those presses is held back.
       rest: { min: 0.05, max: 0.85 },
     },
     rules: [
@@ -61,11 +61,17 @@ const rhodes: InstrumentDef = {
       // Heavy playing hits harder and rings longer; light playing is brief.
       { when: { weight: 'high' }, then: { decay: 'high', bite: 'mid' } },
       { when: { weight: 'low' }, then: { decay: 'low', release: 'low' } },
-      { when: { motion: 'high' }, then: { tremoloHz: 'high', tremolo: 'high', rate: 'high' } },
-      { when: { motion: 'low' }, then: { tremolo: 'low', rate: 'low', release: 'high' } },
+      { when: { motion: 'high' }, then: { tremoloHz: 'high', tremolo: 'high' } },
+      { when: { motion: 'low' }, then: { tremolo: 'low', release: 'high' } },
+      // Restlessness brings the hand down a little more often, but only a
+      // little: on its own it must never turn the passer-by into a player.
+      { when: { motion: 'high' }, then: { rate: 'mid' }, weight: 0.5 },
+      { when: { motion: 'low' }, then: { rate: 'low' }, weight: 0.5 },
       { when: { tension: 'high' }, then: { bite: 'high', spread: 'low' } },
       { when: { tension: 'low' }, then: { spread: 'high' } },
-      { when: { density: 'high' }, then: { rate: 'high', rest: 'low', decay: 'low' } },
+      // Even a busy piece only gets the middle of the dial; anything busier
+      // is a hand on the knob.
+      { when: { density: 'high' }, then: { rate: 'mid', rest: 'low', decay: 'low' } },
       { when: { density: 'mid' }, then: { rate: 'mid', rest: 'mid' } },
       { when: { density: 'low' }, then: { rate: 'low', rest: 'high', decay: 'high' } },
       // Sparse and still together means long, hanging notes — the two dials
@@ -81,7 +87,7 @@ const rhodes: InstrumentDef = {
       })
     }
   },
-  notes: (ctx) => intentsFor(ctx, 'melodic'),
+  notes: wanderingKeys,
   controls: [
     { param: 'tone', label: 'Tone', group: 'sound' },
     { param: 'bite', label: 'Bite', group: 'sound' },
@@ -90,9 +96,15 @@ const rhodes: InstrumentDef = {
     { param: 'tremolo', label: 'Tremolo', group: 'sound' },
     { param: 'tremoloHz', label: 'Trem rate', group: 'sound' },
     { param: 'spread', label: 'Width', group: 'sound' },
-    { param: 'rate', label: 'Notes', group: 'playing' },
-    { param: 'rest', label: 'Rests', group: 'playing' },
+    { param: 'rate', label: 'Notes', group: 'playing', display: (perMinute) => `~${everySeconds(perMinute)}` },
+    { param: 'rest', label: 'Rests', group: 'playing', display: (chance) => `${Math.round(chance * 100)}% held` },
   ],
+}
+
+/** How long, on average, between presses at this many a minute. */
+function everySeconds(perMinute: number): string {
+  const seconds = 60 / Math.max(perMinute, 1e-6)
+  return seconds < 60 ? `${Math.round(seconds)}s` : `${(seconds / 60).toFixed(1)}m`
 }
 
 // ─── Pad ───────────────────────────────────────────────────────────────────
@@ -1148,34 +1160,44 @@ const field: InstrumentDef = {
   ],
 }
 
-/** Generic melodic pattern, shared by pitched instruments that want a line. */
-function intentsFor(ctx: PatternContext, role: 'melodic'): NoteIntent[] {
-  const rate = ctx.params.rate ?? 3
+/**
+ * Someone walking past a piano and pressing a key when they feel like it.
+ *
+ * Every sixteenth has the same small, independent chance of a note, so the
+ * gaps are irregular — two presses close together, then nothing for half a
+ * minute — and no beat, the downbeat included, is preferred. `rate` is presses
+ * per minute rather than per bar, so a tempo change doesn't change how often
+ * the hand comes down. It used to fill a bar's strongest beats first, which
+ * however sparse it got still read as a part keeping time.
+ */
+function wanderingKeys(ctx: PatternContext): NoteIntent[] {
+  const rate = Math.max(0, ctx.params.rate ?? 4)
   const rest = clamp01(ctx.params.rest ?? 0.3)
-  const want = Math.max(0, Math.min(16, Math.round(rate)))
-  // Strong positions first, so thinning out leaves a skeleton that still
-  // swings rather than a random scatter.
-  const order = [0, 8, 4, 12, 6, 14, 2, 10, 3, 11, 7, 15, 1, 9, 5, 13]
+  const stepSec = 60 / ctx.tempo / 4
+  const chance = clamp01((rate / 60) * stepSec * (1 - rest))
   const out: NoteIntent[] = []
   let previous = 0
-  for (let i = 0; i < want; i++) {
-    // A rest drops the note outright. It used to skip to the next position
-    // and keep looking, which moved notes about but never removed one, so no
-    // setting of the dial could make a bar sparser than its note count.
-    if (ctx.rng() < rest) continue
-    const step = order[i]
-    // Contour wanders by small amounts, so the line has direction rather than
-    // jumping around its register.
-    previous = Math.max(-1, Math.min(1, previous + (ctx.rng() - 0.5) * 0.9))
+  for (let step = 0; step < 16; step++) {
+    // Every draw is taken whether or not the note sounds, so one step's
+    // outcome never shifts what the next step rolls.
+    const roll = ctx.rng()
+    const drift = ctx.rng()
+    const weight = ctx.rng()
+    const length = ctx.rng()
+    if (roll >= chance) continue
+    // Contour wanders by small amounts, so a press lands near the last one
+    // rather than anywhere in the register.
+    previous = Math.max(-1, Math.min(1, previous + (drift - 0.5) * 0.9))
     out.push({
-      role,
+      role: 'melodic',
       contour: previous,
-      weight: clamp01((step % 4 === 0 ? 0.7 : 0.48) + (ctx.rng() - 0.5) * 0.3),
+      // Soft and unaccented: nobody is counting.
+      weight: 0.4 + weight * 0.25,
       step,
-      lengthSteps: 2 + ctx.rng() * 6,
+      lengthSteps: 2 + length * 6,
     })
   }
-  return out.sort((a, b) => a.step - b.step)
+  return out
 }
 
 /** In the order the picker lists them: the harmony and the room first. */

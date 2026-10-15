@@ -67,6 +67,8 @@ export interface ControlSpec {
   readonly group?: string
   /** An enumerated choice: the parameter's value, floored, indexes this. */
   readonly options?: readonly string[]
+  /** The knob's readout, given the parameter's real value. Defaults to a percentage. */
+  readonly display?: (value: number) => string
 }
 
 /**
