@@ -1,4 +1,4 @@
-import type { InstrumentDef, InstrumentVoice, PatternContext, PercussionEvent, FixedParam } from '@/instruments/types.ts'
+import type { InstrumentDef, PatternContext, PercussionEvent, FixedParam } from '@/instruments/types.ts'
 import type { NoteIntent } from '@/harmony/types.ts'
 import { beatStrength } from '@/harmony/resolver.ts'
 import { Keys } from '@/voices/keys.ts'
@@ -25,9 +25,6 @@ import { tri } from '@/fuzzy/membership.ts'
  * the fuzzy sets overlap, two half-firing rules blend rather than fight. Adding
  * an instrument means writing sentences, not tuning a hundred interpolations.
  */
-
-const isVoiceWith = <K extends string>(v: InstrumentVoice, key: K): boolean =>
-  typeof (v as unknown as Record<string, unknown>)[key] === 'function'
 
 /** Fractional beats → seconds, used when an instrument sets a note length. */
 const stepsToSeconds = (steps: number, tempo: number): number => (steps / 4) * (60 / tempo)
@@ -1209,4 +1206,4 @@ export function instrumentById(id: string): InstrumentDef | undefined {
   return INSTRUMENTS.find((i) => i.id === id)
 }
 
-export { stepsToSeconds, isVoiceWith }
+export { stepsToSeconds }

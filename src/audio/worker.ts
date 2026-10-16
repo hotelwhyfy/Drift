@@ -12,11 +12,15 @@ import { captureWav } from '@/audio/captureWav.ts'
  * deadline is a click. Here a slow block just eats into the lookahead, which
  * nobody hears — and the same call renders a capture faster than real time.
  */
+// With the DOM lib also loaded, `self` is typed as a Window; this file only
+// ever runs as a worker, so say so rather than casting at each use.
+declare const self: DedicatedWorkerGlobalScope
+
 let engine: Engine | null = null
 let sampleRate = 48000
 
 const post = (m: FromWorker, transfer: Transferable[] = []): void => {
-  ;(self as unknown as Worker).postMessage(m, transfer)
+  self.postMessage(m, transfer)
 }
 
 self.onmessage = (e: MessageEvent<ToWorker>): void => {

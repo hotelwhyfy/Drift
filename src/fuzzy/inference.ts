@@ -21,6 +21,13 @@ import type { Rule, RuleBase } from '@/fuzzy/types.ts'
 /** Resolution of the centroid sum. 33 is visually and audibly smooth. */
 const STEPS = 33
 
+/** A rule's conditions as typed pairs, so callers never index by a loose string. */
+const conditionsOf = (rule: Rule): [ExpressionKey, string][] =>
+  EXPRESSION_KEYS.flatMap((k): [ExpressionKey, string][] => {
+    const term = rule.when[k]
+    return term === undefined ? [] : [[k, term]]
+  })
+
 /**
  * Fuzzifies the expression, fires every rule, aggregates by max, and
  * defuzzifies each output by centroid.
@@ -30,37 +37,46 @@ const STEPS = 33
  * automation running — is far less often than the audio block rate.
  */
 export class FuzzyEngine {
-  private readonly inputTerms: Record<string, Record<string, MembershipFn>> = {}
+  private readonly fallbackTerms = threeTerms()
   private readonly outputNames: string[]
   private lastKey = ''
   private cache: Record<string, number> = {}
 
   constructor(private readonly base: RuleBase) {
-    const fallback = threeTerms()
-    for (const k of EXPRESSION_KEYS) {
-      this.inputTerms[k] = base.inputs?.[k] ?? fallback
-    }
     this.outputNames = Object.keys(base.outputs)
     // Fail loudly at construction rather than silently ignoring a typo that
     // would otherwise show up as an instrument that mysteriously never
     // responds to one of its dimensions.
-    for (const rule of base.rules) {
-      for (const [k, term] of Object.entries(rule.when)) {
-        if (term !== undefined && !this.inputTerms[k]?.[term]) {
+    base.rules.forEach((rule) => {
+      conditionsOf(rule).forEach(([k, term]) => {
+        if (!this.termsFor(k)[term]) {
           throw new Error(`fuzzy: rule references unknown input term ${k} IS ${term}`)
         }
-      }
-      for (const [out, term] of Object.entries(rule.then)) {
+      })
+      Object.entries(rule.then).forEach(([out, term]) => {
         const spec = base.outputs[out]
         if (!spec) throw new Error(`fuzzy: rule references unknown output ${out}`)
         const terms = spec.terms ?? threeTerms()
         if (!terms[term]) throw new Error(`fuzzy: unknown term ${out} IS ${term}`)
-      }
-    }
+      })
+    })
   }
 
   get outputs(): readonly string[] {
     return this.outputNames
+  }
+
+  private termsFor(k: ExpressionKey): Record<string, MembershipFn> {
+    return this.base.inputs?.[k] ?? this.fallbackTerms
+  }
+
+  /** The fuzzy AND of a rule's conditions, scaled by its weight. */
+  private strengthOf(rule: Rule, expression: Expression): number {
+    const antecedent = conditionsOf(rule).reduce(
+      (strength, [k, term]) => Math.min(strength, this.termsFor(k)[term](expression[k])),
+      1,
+    )
+    return antecedent * (rule.weight ?? 1)
   }
 
   evaluate(expression: Expression): Record<string, number> {
@@ -68,56 +84,45 @@ export class FuzzyEngine {
     if (key === this.lastKey) return this.cache
 
     // Aggregated consequent membership per output, sampled over the domain.
-    const agg: Record<string, Float64Array> = {}
-    for (const name of this.outputNames) agg[name] = new Float64Array(STEPS)
+    const agg: Record<string, Float64Array> = Object.fromEntries(
+      this.outputNames.map((name) => [name, new Float64Array(STEPS)]),
+    )
 
-    for (const rule of this.base.rules) {
-      // Antecedent strength: the minimum membership across the conditions,
-      // which is the fuzzy AND.
-      let strength = 1
-      let any = false
-      for (const [k, term] of Object.entries(rule.when)) {
-        if (term === undefined) continue
-        any = true
-        const mf = this.inputTerms[k][term]
-        const m = mf(expression[k as ExpressionKey])
-        if (m < strength) strength = m
-        if (strength === 0) break
-      }
-      if (!any) strength = 1
-      strength *= rule.weight ?? 1
-      if (strength <= 0) continue
+    this.base.rules.forEach((rule) => {
+      const strength = this.strengthOf(rule, expression)
+      if (strength <= 0) return
 
-      for (const [out, term] of Object.entries(rule.then)) {
-        const spec = this.base.outputs[out]
-        const mf = (spec.terms ?? threeTerms())[term]
+      Object.entries(rule.then).forEach(([out, term]) => {
+        const mf = (this.base.outputs[out].terms ?? threeTerms())[term]
         const target = agg[out]
         for (let i = 0; i < STEPS; i++) {
           // Implication by clipping, aggregation by max.
           const v = Math.min(strength, mf(i / (STEPS - 1)))
           if (v > target[i]) target[i] = v
         }
-      }
-    }
+      })
+    })
 
-    const result: Record<string, number> = {}
-    for (const name of this.outputNames) {
-      const spec = this.base.outputs[name]
-      const curve = agg[name]
-      let num = 0
-      let den = 0
-      for (let i = 0; i < STEPS; i++) {
-        const x = i / (STEPS - 1)
-        num += x * curve[i]
-        den += curve[i]
-      }
-      // No rule fired at all: sit in the middle rather than collapse to zero,
-      // which would make an unmatched instrument fall silent.
-      const norm = den > 1e-9 ? num / den : 0.5
-      result[name] = spec.scale === 'exp'
-        ? spec.min * Math.pow(spec.max / spec.min, norm)
-        : spec.min + (spec.max - spec.min) * norm
-    }
+    const result: Record<string, number> = Object.fromEntries(
+      this.outputNames.map((name) => {
+        const spec = this.base.outputs[name]
+        const curve = agg[name]
+        let num = 0
+        let den = 0
+        for (let i = 0; i < STEPS; i++) {
+          const x = i / (STEPS - 1)
+          num += x * curve[i]
+          den += curve[i]
+        }
+        // No rule fired at all: sit in the middle rather than collapse to zero,
+        // which would make an unmatched instrument fall silent.
+        const norm = den > 1e-9 ? num / den : 0.5
+        const value = spec.scale === 'exp'
+          ? spec.min * Math.pow(spec.max / spec.min, norm)
+          : spec.min + (spec.max - spec.min) * norm
+        return [name, value]
+      }),
+    )
 
     this.lastKey = key
     this.cache = result
@@ -130,19 +135,8 @@ export class FuzzyEngine {
    * readable rules in the first place.
    */
   explain(expression: Expression, limit = 4): { rule: Rule; strength: number }[] {
-    const scored = this.base.rules.map((rule) => {
-      let strength = 1
-      let any = false
-      for (const [k, term] of Object.entries(rule.when)) {
-        if (term === undefined) continue
-        any = true
-        const m = this.inputTerms[k][term](expression[k as ExpressionKey])
-        if (m < strength) strength = m
-      }
-      if (!any) strength = 1
-      return { rule, strength: strength * (rule.weight ?? 1) }
-    })
-    return scored
+    return this.base.rules
+      .map((rule) => ({ rule, strength: this.strengthOf(rule, expression) }))
       .filter((s) => s.strength > 0.05)
       .sort((a, b) => b.strength - a.strength)
       .slice(0, limit)
