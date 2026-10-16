@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { Engine } from '../src/engine/engine.ts'
-import type { ScheduledEvent, SlotDesc } from '../src/engine/types.ts'
-import { Harmony } from '../src/compose/harmony.ts'
-import { walkAt } from '../src/automation/walkAt.ts'
-import { makeLane } from '../src/automation/lane.ts'
-import type { Lane } from '../src/automation/lane.ts'
-import { curveFromStroke } from '../src/automation/curve.ts'
-import { buildPatch } from '../src/macros/patch.ts'
-import { DEFAULT_MACROS } from '../src/macros/macros.ts'
+import { Engine } from '@/engine/engine.ts'
+import type { ScheduledEvent, SlotDesc } from '@/engine/types.ts'
+import { Harmony } from '@/compose/harmony.ts'
+import { walkAt } from '@/automation/walkAt.ts'
+import { makeLane } from '@/automation/lane.ts'
+import type { Lane } from '@/automation/lane.ts'
+import { curveFromStroke } from '@/automation/curve.ts'
+import { buildPatch } from '@/macros/patch.ts'
+import { DEFAULT_MACROS } from '@/macros/macros.ts'
 
 const SR = 24000
 

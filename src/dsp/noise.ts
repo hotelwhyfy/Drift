@@ -1,4 +1,4 @@
-import type { Rng } from '../core/rng.ts'
+import type { Rng } from '@/core/rng.ts'
 
 /**
  * Noise colours. Pink and brown are the useful ones: white noise reads as hiss

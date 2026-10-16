@@ -1,8 +1,8 @@
-import type { Rng } from '../core/rng.ts'
-import type { Stereo, DrumHit } from '../core/types.ts'
-import type { RuleBase, OutputSpec } from '../fuzzy/types.ts'
-import type { Expression } from '../fuzzy/expression.ts'
-import type { NoteIntent, Register, Role } from '../harmony/types.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo, DrumHit } from '@/core/types.ts'
+import type { RuleBase, OutputSpec } from '@/fuzzy/types.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import type { NoteIntent, Register, Role } from '@/harmony/types.ts'
 
 /** What an instrument's sound engine must be able to do. */
 export interface InstrumentVoice {

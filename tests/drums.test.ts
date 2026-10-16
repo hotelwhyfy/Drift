@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { drumPattern } from '../src/compose/drumPattern.ts'
-import { DRUM_STYLES, FILL_EVERY } from '../src/compose/drumStyles.ts'
-import type { PatternContext } from '../src/instruments/types.ts'
-import { rngAt } from '../src/core/rng.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
-import { Engine } from '../src/engine/engine.ts'
-import { DEFAULT_MACROS } from '../src/macros/macros.ts'
+import { drumPattern } from '@/compose/drumPattern.ts'
+import { DRUM_STYLES, FILL_EVERY } from '@/compose/drumStyles.ts'
+import type { PatternContext } from '@/instruments/types.ts'
+import { rngAt } from '@/core/rng.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
+import { Engine } from '@/engine/engine.ts'
+import { DEFAULT_MACROS } from '@/macros/macros.ts'
 
 function ctx(bar: number, params: Record<string, number>): PatternContext {
   return {

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { FuzzyEngine } from '../src/fuzzy/inference.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
-import type { Expression } from '../src/fuzzy/expression.ts'
-import { positionWord, positionPhrase } from '../src/fuzzy/lexicon.ts'
-import { curveFromStroke, sampleCurve } from '../src/automation/curve.ts'
-import { INSTRUMENTS } from '../src/instruments/registry.ts'
+import { FuzzyEngine } from '@/fuzzy/inference.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import { positionWord, positionPhrase } from '@/fuzzy/lexicon.ts'
+import { curveFromStroke, sampleCurve } from '@/automation/curve.ts'
+import { INSTRUMENTS } from '@/instruments/registry.ts'
 
 const at = (p: Partial<Expression>): Expression => ({ ...NEUTRAL, ...p })
 

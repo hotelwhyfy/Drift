@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import type { Song, HarmonySection } from '../song/types.ts'
-import { PROGRESSION_STYLES, EXTENSIONS, CHORD_BAR_CHOICES, autoSection } from '../song/song.ts'
-import { MODES, NOTE_NAMES } from '../core/theory.ts'
-import type { Mode } from '../core/theory.ts'
-import type { BarScale } from './barScale.ts'
-import { romanNumeral } from './romanNumeral.ts'
-import { Tooltip } from './Tooltip.tsx'
-import { released } from './released.ts'
+import type { Song, HarmonySection } from '@/song/types.ts'
+import { PROGRESSION_STYLES, EXTENSIONS, CHORD_BAR_CHOICES, autoSection } from '@/song/song.ts'
+import { MODES, NOTE_NAMES } from '@/core/theory.ts'
+import type { Mode } from '@/core/theory.ts'
+import type { BarScale } from '@/ui/barScale.ts'
+import { romanNumeral } from '@/ui/romanNumeral.ts'
+import { Tooltip } from '@/ui/Tooltip.tsx'
+import { released } from '@/ui/released.ts'
 
 interface Props {
   song: Song

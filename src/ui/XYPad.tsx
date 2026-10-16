@@ -1,9 +1,9 @@
 import { useCallback, useRef } from 'react'
-import type { ExpressionKey } from '../fuzzy/expression.ts'
-import { EXPRESSION_INFO } from '../fuzzy/expression.ts'
-import { released } from './released.ts'
-import { Select } from './Select.tsx'
-import type { SelectOption } from './Select.tsx'
+import type { ExpressionKey } from '@/fuzzy/expression.ts'
+import { EXPRESSION_INFO } from '@/fuzzy/expression.ts'
+import { released } from '@/ui/released.ts'
+import { Select } from '@/ui/Select.tsx'
+import type { SelectOption } from '@/ui/Select.tsx'
 
 interface Props {
   xKey: ExpressionKey

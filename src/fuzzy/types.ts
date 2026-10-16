@@ -1,5 +1,5 @@
-import type { MembershipFn } from './membership.ts'
-import type { ExpressionKey } from './expression.ts'
+import type { MembershipFn } from '@/fuzzy/membership.ts'
+import type { ExpressionKey } from '@/fuzzy/expression.ts'
 
 /** How a normalised 0..1 inference result maps onto a real parameter. */
 export type Scale = 'linear' | 'exp'

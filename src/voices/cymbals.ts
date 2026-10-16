@@ -1,10 +1,10 @@
-import { Decay } from '../dsp/env.ts'
-import { Svf } from '../dsp/svf.ts'
-import { Noise } from '../dsp/noise.ts'
-import { Metal } from '../dsp/metal.ts'
-import { clamp, clamp01, lerp } from '../core/curves.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo, DrumHit } from '../core/types.ts'
+import { Decay } from '@/dsp/env.ts'
+import { Svf } from '@/dsp/svf.ts'
+import { Noise } from '@/dsp/noise.ts'
+import { Metal } from '@/dsp/metal.ts'
+import { clamp, clamp01, lerp } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo, DrumHit } from '@/core/types.ts'
 
 export interface CymbalsParams {
   /** Bandpass centre at the top of a gesture, Hz. */

@@ -1,8 +1,8 @@
-import { Decay } from './env.ts'
-import { sineFrom } from './osc.ts'
-import { lerp } from '../core/curves.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Decay } from '@/dsp/env.ts'
+import { sineFrom } from '@/dsp/osc.ts'
+import { lerp } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 /**
  * A pool of small bubbles in water. A bubble rings as a short sine whose pitch

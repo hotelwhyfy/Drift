@@ -1,7 +1,7 @@
-import type { Lane } from './lane.ts'
-import type { SongLane } from './songLaneFor.ts'
-import { invertLane } from './invertLane.ts'
-import { setPointAt } from '../song/setPointAt.ts'
+import type { Lane } from '@/automation/lane.ts'
+import type { SongLane } from '@/automation/songLaneFor.ts'
+import { invertLane } from '@/automation/invertLane.ts'
+import { setPointAt } from '@/song/setPointAt.ts'
 
 /**
  * A control moved to `value` while `lane` drives it: write the point that

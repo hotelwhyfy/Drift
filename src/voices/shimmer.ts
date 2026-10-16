@@ -1,9 +1,9 @@
-import { Adsr } from '../dsp/env.ts'
-import { Svf } from '../dsp/svf.ts'
-import { clamp01, lerp } from '../core/curves.ts'
-import { midiToHz } from '../core/theory.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Adsr } from '@/dsp/env.ts'
+import { Svf } from '@/dsp/svf.ts'
+import { clamp01, lerp } from '@/core/curves.ts'
+import { midiToHz } from '@/core/theory.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export interface ShimmerParams {
   /** Seconds per grain. */

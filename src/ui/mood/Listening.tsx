@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Player } from '../../audio/player.ts'
+import type { Player } from '@/audio/player.ts'
 
 interface Props {
   player: Player | null

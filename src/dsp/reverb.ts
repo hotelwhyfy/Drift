@@ -1,7 +1,7 @@
-import { DelayLine } from './delay.ts'
-import { SmoothRandom } from './noise.ts'
-import type { Rng } from '../core/rng.ts'
-import { clamp } from '../core/curves.ts'
+import { DelayLine } from '@/dsp/delay.ts'
+import { SmoothRandom } from '@/dsp/noise.ts'
+import type { Rng } from '@/core/rng.ts'
+import { clamp } from '@/core/curves.ts'
 
 /**
  * Feedback delay network, 8 lines with a Hadamard mixing matrix.

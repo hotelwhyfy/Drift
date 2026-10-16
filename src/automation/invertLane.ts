@@ -1,4 +1,4 @@
-import type { Lane } from './lane.ts'
+import type { Lane } from '@/automation/lane.ts'
 
 /**
  * The lane value that takes `base` to `target` under the lane's mode and

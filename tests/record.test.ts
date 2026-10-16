@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { LaneEvaluator, makeLane } from '../src/automation/lane.ts'
-import type { Lane, LaneMode } from '../src/automation/lane.ts'
-import { invertLane } from '../src/automation/invertLane.ts'
-import { songLaneFor } from '../src/automation/songLaneFor.ts'
-import type { SongLane } from '../src/automation/songLaneFor.ts'
-import { recordInto } from '../src/automation/recordInto.ts'
-import { drivenValue } from '../src/automation/drivenValue.ts'
-import type { Breakpoint } from '../src/song/types.ts'
+import { LaneEvaluator, makeLane } from '@/automation/lane.ts'
+import type { Lane, LaneMode } from '@/automation/lane.ts'
+import { invertLane } from '@/automation/invertLane.ts'
+import { songLaneFor } from '@/automation/songLaneFor.ts'
+import type { SongLane } from '@/automation/songLaneFor.ts'
+import { recordInto } from '@/automation/recordInto.ts'
+import { drivenValue } from '@/automation/drivenValue.ts'
+import type { Breakpoint } from '@/song/types.ts'
 
 const lanes = new LaneEvaluator()
 

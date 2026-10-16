@@ -4,10 +4,10 @@
  * this list, so the harmony brightens with the timbre rather than independently
  * of it.
  */
-import { clamp, clamp01 } from './curves.ts'
-import type { Rng } from './rng.ts'
-import { pickWeighted } from './rng.ts'
-import type { Extensions } from '../song/types.ts'
+import { clamp, clamp01 } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import { pickWeighted } from '@/core/rng.ts'
+import type { Extensions } from '@/song/types.ts'
 
 export interface Mode {
   readonly name: string

@@ -1,9 +1,9 @@
-import { DelayLine } from './delay.ts'
-import { SmoothRandom } from './noise.ts'
-import { Lfo } from './osc.ts'
-import { DcBlock } from './svf.ts'
-import type { Rng } from '../core/rng.ts'
-import { clamp01 } from '../core/curves.ts'
+import { DelayLine } from '@/dsp/delay.ts'
+import { SmoothRandom } from '@/dsp/noise.ts'
+import { Lfo } from '@/dsp/osc.ts'
+import { DcBlock } from '@/dsp/svf.ts'
+import type { Rng } from '@/core/rng.ts'
+import { clamp01 } from '@/core/curves.ts'
 
 /**
  * Wow and flutter — a delay line whose length wanders.

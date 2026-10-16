@@ -1,4 +1,4 @@
-import { Phasor, squareFrom } from './osc.ts'
+import { Phasor, squareFrom } from '@/dsp/osc.ts'
 
 /**
  * Six square waves at the 808 cymbal's ratios: 205.3, 304.4, 369.6, 522.7,

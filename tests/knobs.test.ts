@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { Rack } from '../src/engine/rack.ts'
-import type { SlotDesc } from '../src/engine/types.ts'
-import { makeLane } from '../src/automation/lane.ts'
-import type { Lane } from '../src/automation/lane.ts'
-import { flatCurve } from '../src/automation/curve.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
-import { INSTRUMENTS } from '../src/instruments/registry.ts'
-import { controlsOf } from '../src/instruments/controlsOf.ts'
-import { paramSpecOf } from '../src/instruments/paramSpecOf.ts'
+import { Rack } from '@/engine/rack.ts'
+import type { SlotDesc } from '@/engine/types.ts'
+import { makeLane } from '@/automation/lane.ts'
+import type { Lane } from '@/automation/lane.ts'
+import { flatCurve } from '@/automation/curve.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
+import { INSTRUMENTS } from '@/instruments/registry.ts'
+import { controlsOf } from '@/instruments/controlsOf.ts'
+import { paramSpecOf } from '@/instruments/paramSpecOf.ts'
 
 const SR = 24000
 

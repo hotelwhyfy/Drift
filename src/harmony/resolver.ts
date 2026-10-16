@@ -1,8 +1,8 @@
-import { stepInMode } from '../core/theory.ts'
-import { clamp } from '../core/curves.ts'
-import { rngAt } from '../core/rng.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Role, NoteIntent, Register, HarmonicContext } from './types.ts'
+import { stepInMode } from '@/core/theory.ts'
+import { clamp } from '@/core/curves.ts'
+import { rngAt } from '@/core/rng.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Role, NoteIntent, Register, HarmonicContext } from '@/harmony/types.ts'
 
 /**
  * Metrical strength of each sixteenth in a 4/4 bar.

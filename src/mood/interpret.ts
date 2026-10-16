@@ -1,13 +1,13 @@
-import type { Expression } from '../fuzzy/expression.ts'
-import { EXPRESSION_KEYS, NEUTRAL } from '../fuzzy/expression.ts'
-import { positionWord } from '../fuzzy/lexicon.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import { EXPRESSION_KEYS, NEUTRAL } from '@/fuzzy/expression.ts'
+import { positionWord } from '@/fuzzy/lexicon.ts'
 import {
   MOOD_WORDS, MOOD_PHRASES, MAX_PHRASE_WORDS,
   INTENSIFIERS, DIMINISHERS, NEGATIONS, CONTRAST,
-} from './moodLexicon.ts'
-import type { MoodVec } from './moodLexicon.ts'
-import { deriveSeed } from '../core/rng.ts'
-import { clamp01, lerp } from '../core/curves.ts'
+} from '@/mood/moodLexicon.ts'
+import type { MoodVec } from '@/mood/moodLexicon.ts'
+import { deriveSeed } from '@/core/rng.ts'
+import { clamp01, lerp } from '@/core/curves.ts'
 
 export interface Reading {
   /** What the person actually typed, kept verbatim for display. */

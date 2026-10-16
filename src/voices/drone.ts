@@ -1,9 +1,9 @@
-import { Adsr } from '../dsp/env.ts'
-import { SmoothRandom } from '../dsp/noise.ts'
-import { panGains, clamp, clamp01, lerp } from '../core/curves.ts'
-import { midiToHz } from '../core/theory.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Adsr } from '@/dsp/env.ts'
+import { SmoothRandom } from '@/dsp/noise.ts'
+import { panGains, clamp, clamp01, lerp } from '@/core/curves.ts'
+import { midiToHz } from '@/core/theory.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export interface DroneParams {
   attack: number

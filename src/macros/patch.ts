@@ -1,8 +1,8 @@
-import type { Macros } from './macros.ts'
-import { clamp01, clamp, lerp, lerpExp, bias, ramp, hump, dbToGain } from '../core/curves.ts'
-import { MODES, modeAt } from '../core/theory.ts'
-import type { Expression } from '../fuzzy/expression.ts'
-import type { ReverbSettings, EchoSettings, MasterSettings, ComposeSettings, Patch } from './types.ts'
+import type { Macros } from '@/macros/macros.ts'
+import { clamp01, clamp, lerp, lerpExp, bias, ramp, hump, dbToGain } from '@/core/curves.ts'
+import { MODES, modeAt } from '@/core/theory.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import type { ReverbSettings, EchoSettings, MasterSettings, ComposeSettings, Patch } from '@/macros/types.ts'
 
 /**
  * Macros → the global expression.

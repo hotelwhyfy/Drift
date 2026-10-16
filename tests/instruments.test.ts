@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { Engine } from '../src/engine/engine.ts'
-import { INSTRUMENTS } from '../src/instruments/registry.ts'
-import { DEFAULT_MACROS } from '../src/macros/macros.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
+import { Engine } from '@/engine/engine.ts'
+import { INSTRUMENTS } from '@/instruments/registry.ts'
+import { DEFAULT_MACROS } from '@/macros/macros.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
 
 const SR = 24000
 

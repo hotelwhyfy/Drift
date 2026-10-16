@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { instrumentById } from '../src/instruments/registry.ts'
-import type { InstrumentDef, PatternContext } from '../src/instruments/types.ts'
-import { rngAt } from '../src/core/rng.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
-import { denormaliseParam } from '../src/fuzzy/denormaliseParam.ts'
-import { FuzzyEngine } from '../src/fuzzy/inference.ts'
+import { instrumentById } from '@/instruments/registry.ts'
+import type { InstrumentDef, PatternContext } from '@/instruments/types.ts'
+import { rngAt } from '@/core/rng.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
+import { denormaliseParam } from '@/fuzzy/denormaliseParam.ts'
+import { FuzzyEngine } from '@/fuzzy/inference.ts'
 
 const TEMPO = 80
 const BARS = 3000

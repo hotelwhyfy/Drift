@@ -1,8 +1,8 @@
-import type { PatternContext, PercussionEvent } from '../instruments/types.ts'
-import type { DrumHit } from '../core/types.ts'
-import { DRUM_STYLES, FILL_EVERY } from './drumStyles.ts'
-import { beatStrength } from '../harmony/resolver.ts'
-import { clamp01, lerp } from '../core/curves.ts'
+import type { PatternContext, PercussionEvent } from '@/instruments/types.ts'
+import type { DrumHit } from '@/core/types.ts'
+import { DRUM_STYLES, FILL_EVERY } from '@/compose/drumStyles.ts'
+import { beatStrength } from '@/harmony/resolver.ts'
+import { clamp01, lerp } from '@/core/curves.ts'
 
 /** Snare ghosts only where they cannot smudge the backbeat. */
 const GHOST_STEPS = [1, 3, 6, 7, 9, 10, 14, 15]

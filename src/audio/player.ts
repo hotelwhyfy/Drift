@@ -1,8 +1,8 @@
-import type { Macros } from '../macros/macros.ts'
-import type { SlotDesc, EngineSnapshot } from '../engine/types.ts'
-import type { ToWorker, FromWorker } from './messages.ts'
-import type { Song } from '../song/types.ts'
-import { DEFAULT_SONG } from '../song/song.ts'
+import type { Macros } from '@/macros/macros.ts'
+import type { SlotDesc, EngineSnapshot } from '@/engine/types.ts'
+import type { ToWorker, FromWorker } from '@/audio/messages.ts'
+import type { Song } from '@/song/types.ts'
+import { DEFAULT_SONG } from '@/song/song.ts'
 
 /**
  * How far ahead of the speakers audio is rendered.

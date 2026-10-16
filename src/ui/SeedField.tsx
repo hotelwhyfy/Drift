@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Tooltip } from './Tooltip.tsx'
+import { Tooltip } from '@/ui/Tooltip.tsx'
 
 interface Props {
   value: string

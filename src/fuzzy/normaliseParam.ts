@@ -1,5 +1,5 @@
-import type { OutputSpec } from './types.ts'
-import { clamp01 } from '../core/curves.ts'
+import type { OutputSpec } from '@/fuzzy/types.ts'
+import { clamp01 } from '@/core/curves.ts'
 
 /** A parameter's real value → 0..1 across its range, respecting its scale. */
 export function normaliseParam(spec: OutputSpec, value: number): number {

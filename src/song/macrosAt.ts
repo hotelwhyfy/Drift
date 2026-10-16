@@ -1,7 +1,7 @@
-import type { Song } from './types.ts'
-import { sampleEnvelope } from './sampleEnvelope.ts'
-import type { Macros, MacroKey } from '../macros/macros.ts'
-import { MACRO_KEYS } from '../macros/macros.ts'
+import type { Song } from '@/song/types.ts'
+import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
+import type { Macros, MacroKey } from '@/macros/macros.ts'
+import { MACRO_KEYS } from '@/macros/macros.ts'
 
 export interface SongMacros {
   readonly macros: Macros

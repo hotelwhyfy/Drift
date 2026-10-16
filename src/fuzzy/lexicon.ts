@@ -1,6 +1,6 @@
-import type { Expression } from './expression.ts'
-import { NEUTRAL } from './expression.ts'
-import { deriveSeed, createRng } from '../core/rng.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
+import { deriveSeed, createRng } from '@/core/rng.ts'
 
 /**
  * Words as positions in the expression space.

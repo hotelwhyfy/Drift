@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { instrumentById } from '../src/instruments/registry.ts'
-import type { PatternContext } from '../src/instruments/types.ts'
-import { Resolver } from '../src/harmony/resolver.ts'
-import type { HarmonicContext } from '../src/harmony/types.ts'
-import { MODES } from '../src/core/theory.ts'
-import { rngAt } from '../src/core/rng.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
+import { instrumentById } from '@/instruments/registry.ts'
+import type { PatternContext } from '@/instruments/types.ts'
+import { Resolver } from '@/harmony/resolver.ts'
+import type { HarmonicContext } from '@/harmony/types.ts'
+import { MODES } from '@/core/theory.ts'
+import { rngAt } from '@/core/rng.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
 
 const harmonic: HarmonicContext = {
   chord: { degree: 0, notes: [60, 63, 67, 70], root: 48 },

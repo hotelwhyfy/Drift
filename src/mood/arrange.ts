@@ -1,13 +1,13 @@
-import type { Reading } from './interpret.ts'
-import { restingPlace } from './interpret.ts'
-import type { Macros } from '../macros/macros.ts'
-import type { Expression } from '../fuzzy/expression.ts'
-import type { SlotDesc } from '../engine/types.ts'
-import { instrumentById } from '../instruments/registry.ts'
-import { makeLane } from '../automation/lane.ts'
-import type { Lane } from '../automation/lane.ts'
-import { clamp01, lerp } from '../core/curves.ts'
-import { rngAt } from '../core/rng.ts'
+import type { Reading } from '@/mood/interpret.ts'
+import { restingPlace } from '@/mood/interpret.ts'
+import type { Macros } from '@/macros/macros.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import type { SlotDesc } from '@/engine/types.ts'
+import { instrumentById } from '@/instruments/registry.ts'
+import { makeLane } from '@/automation/lane.ts'
+import type { Lane } from '@/automation/lane.ts'
+import { clamp01, lerp } from '@/core/curves.ts'
+import { rngAt } from '@/core/rng.ts'
 
 /**
  * An expression position → the six master dials.

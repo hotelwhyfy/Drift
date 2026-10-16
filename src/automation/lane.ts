@@ -1,9 +1,9 @@
-import { sampleCurve, flatCurve } from './curve.ts'
-import type { Curve } from './curve.ts'
-import { walkAt } from './walkAt.ts'
-import type { Envelope } from '../song/types.ts'
-import { sampleEnvelope } from '../song/sampleEnvelope.ts'
-import type { ExpressionKey } from '../fuzzy/expression.ts'
+import { sampleCurve, flatCurve } from '@/automation/curve.ts'
+import type { Curve } from '@/automation/curve.ts'
+import { walkAt } from '@/automation/walkAt.ts'
+import type { Envelope } from '@/song/types.ts'
+import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
+import type { ExpressionKey } from '@/fuzzy/expression.ts'
 
 /**
  * Automation sources.

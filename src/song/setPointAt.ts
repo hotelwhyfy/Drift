@@ -1,4 +1,4 @@
-import type { Envelope, Breakpoint } from './types.ts'
+import type { Envelope, Breakpoint } from '@/song/types.ts'
 
 /**
  * Write a value into an envelope at a bar: move the point already there (or

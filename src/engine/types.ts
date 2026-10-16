@@ -1,7 +1,7 @@
-import type { Expression } from '../fuzzy/expression.ts'
-import type { Lane } from '../automation/lane.ts'
-import type { DrumHit } from '../core/types.ts'
-import type { Macros } from '../macros/macros.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import type { Lane } from '@/automation/lane.ts'
+import type { DrumHit } from '@/core/types.ts'
+import type { Macros } from '@/macros/macros.ts'
 
 /**
  * A serialisable description of one slot. The interface owns this; the rack

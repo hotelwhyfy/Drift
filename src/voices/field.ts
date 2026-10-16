@@ -1,10 +1,10 @@
-import { Svf } from '../dsp/svf.ts'
-import { Noise, SmoothRandom } from '../dsp/noise.ts'
-import { Decay } from '../dsp/env.ts'
-import { Bubbles } from '../dsp/bubbles.ts'
-import { panGains, clamp01, lerp } from '../core/curves.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Svf } from '@/dsp/svf.ts'
+import { Noise, SmoothRandom } from '@/dsp/noise.ts'
+import { Decay } from '@/dsp/env.ts'
+import { Bubbles } from '@/dsp/bubbles.ts'
+import { panGains, clamp01, lerp } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export type FieldKind = 'rumble' | 'fire' | 'stream' | 'night'
 

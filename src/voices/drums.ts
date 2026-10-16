@@ -1,10 +1,10 @@
-import { Decay } from '../dsp/env.ts'
-import { Phasor, sineFrom } from '../dsp/osc.ts'
-import { Svf, DcBlock } from '../dsp/svf.ts'
-import { Noise } from '../dsp/noise.ts'
-import { clamp, clamp01, lerp } from '../core/curves.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo, DrumHit } from '../core/types.ts'
+import { Decay } from '@/dsp/env.ts'
+import { Phasor, sineFrom } from '@/dsp/osc.ts'
+import { Svf, DcBlock } from '@/dsp/svf.ts'
+import { Noise } from '@/dsp/noise.ts'
+import { clamp, clamp01, lerp } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo, DrumHit } from '@/core/types.ts'
 
 export interface DrumParams {
   /** 0..1 — lowpass on the whole kit. Low values give the dusty sampled feel. */

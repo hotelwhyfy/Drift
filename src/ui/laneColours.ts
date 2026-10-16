@@ -1,4 +1,4 @@
-import type { MacroKey } from '../macros/macros.ts'
+import type { MacroKey } from '@/macros/macros.ts'
 
 /**
  * One colour per timeline lane, so six curves stacked together read as six

@@ -1,4 +1,4 @@
-import type { Song, HarmonySection } from './types.ts'
+import type { Song, HarmonySection } from '@/song/types.ts'
 
 /** The harmony section in force at a bar, or null where the dials decide. */
 export function sectionAt(song: Song, bar: number): HarmonySection | null {

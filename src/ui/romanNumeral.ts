@@ -1,5 +1,5 @@
-import type { Mode } from '../core/theory.ts'
-import { degreeToSemitone } from '../core/theory.ts'
+import type { Mode } from '@/core/theory.ts'
+import { degreeToSemitone } from '@/core/theory.ts'
 
 const NUMERALS = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii']
 

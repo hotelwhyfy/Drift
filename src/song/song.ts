@@ -1,4 +1,4 @@
-import type { BreakpointShape, ProgressionStyle, Extensions, HarmonySection, Song } from './types.ts'
+import type { BreakpointShape, ProgressionStyle, Extensions, HarmonySection, Song } from '@/song/types.ts'
 
 /**
  * A song: the six dials, and optionally the harmony, laid out over a timeline

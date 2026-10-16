@@ -1,9 +1,9 @@
-import { Svf } from '../dsp/svf.ts'
-import { Noise, SmoothRandom } from '../dsp/noise.ts'
-import { Phasor, sineFrom } from '../dsp/osc.ts'
-import { clamp01 } from '../core/curves.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Svf } from '@/dsp/svf.ts'
+import { Noise, SmoothRandom } from '@/dsp/noise.ts'
+import { Phasor, sineFrom } from '@/dsp/osc.ts'
+import { clamp01 } from '@/core/curves.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export interface VinylParams {
   /** 0..1 — density of surface crackle. */

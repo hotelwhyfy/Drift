@@ -1,8 +1,8 @@
-import { DelayLine } from './delay.ts'
-import { Lfo } from './osc.ts'
-import { Svf } from './svf.ts'
-import type { Rng } from '../core/rng.ts'
-import { clamp01 } from '../core/curves.ts'
+import { DelayLine } from '@/dsp/delay.ts'
+import { Lfo } from '@/dsp/osc.ts'
+import { Svf } from '@/dsp/svf.ts'
+import type { Rng } from '@/core/rng.ts'
+import { clamp01 } from '@/core/curves.ts'
 
 /**
  * Three-tap chorus. Its real job here is not the 80s effect but stereo width:

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import { positionPhrase, SUGGESTIONS } from '../fuzzy/lexicon.ts'
-import type { Expression } from '../fuzzy/expression.ts'
+import { positionPhrase, SUGGESTIONS } from '@/fuzzy/lexicon.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
 
 interface Props {
   onApply: (expression: Expression) => void

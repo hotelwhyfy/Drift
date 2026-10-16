@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { Engine } from '../src/engine/engine.ts'
-import type { ScheduledEvent } from '../src/engine/types.ts'
-import { sampleEnvelope } from '../src/song/sampleEnvelope.ts'
-import { macrosAt } from '../src/song/macrosAt.ts'
-import { songFrames } from '../src/song/songFrames.ts'
-import { DEFAULT_SONG } from '../src/song/song.ts'
-import type { Song, Breakpoint } from '../src/song/types.ts'
-import { DEFAULT_MACROS } from '../src/macros/macros.ts'
+import { Engine } from '@/engine/engine.ts'
+import type { ScheduledEvent } from '@/engine/types.ts'
+import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
+import { macrosAt } from '@/song/macrosAt.ts'
+import { songFrames } from '@/song/songFrames.ts'
+import { DEFAULT_SONG } from '@/song/song.ts'
+import type { Song, Breakpoint } from '@/song/types.ts'
+import { DEFAULT_MACROS } from '@/macros/macros.ts'
 
 const SR = 24000
 

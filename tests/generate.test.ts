@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { generateDrift } from '../src/generate/generateDrift.ts'
-import { readProject, writeProject } from '../src/project/project.ts'
-import { instrumentById, INSTRUMENTS } from '../src/instruments/registry.ts'
-import { MACRO_KEYS } from '../src/macros/macros.ts'
-import { EXPRESSION_KEYS } from '../src/fuzzy/expression.ts'
+import { generateDrift } from '@/generate/generateDrift.ts'
+import { readProject, writeProject } from '@/project/project.ts'
+import { instrumentById, INSTRUMENTS } from '@/instruments/registry.ts'
+import { MACRO_KEYS } from '@/macros/macros.ts'
+import { EXPRESSION_KEYS } from '@/fuzzy/expression.ts'
 
 const NAMES = Array.from({ length: 200 }, (_, i) => `test-seed-${i}`)
 

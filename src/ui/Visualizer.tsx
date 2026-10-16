@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Player } from '../audio/player.ts'
+import type { Player } from '@/audio/player.ts'
 
 /** The band the music lives in; everything outside it is dead space. */
 const LOW_HZ = 45

@@ -1,6 +1,6 @@
-import type { Lane, LaneTarget } from '../automation/lane.ts'
-import { lanesOn } from '../automation/lanesOn.ts'
-import { laneColour } from './laneColour.ts'
+import type { Lane, LaneTarget } from '@/automation/lane.ts'
+import { lanesOn } from '@/automation/lanesOn.ts'
+import { laneColour } from '@/ui/laneColour.ts'
 
 /**
  * The colour a control wears while automation acts on it, or undefined when

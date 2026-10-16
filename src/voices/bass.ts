@@ -1,9 +1,9 @@
-import { Adsr } from '../dsp/env.ts'
-import { Phasor, sineFrom, Triangle } from '../dsp/osc.ts'
-import { Svf, DcBlock } from '../dsp/svf.ts'
-import { midiToHz } from '../core/theory.ts'
-import { clamp01, lerp } from '../core/curves.ts'
-import type { Stereo } from '../core/types.ts'
+import { Adsr } from '@/dsp/env.ts'
+import { Phasor, sineFrom, Triangle } from '@/dsp/osc.ts'
+import { Svf, DcBlock } from '@/dsp/svf.ts'
+import { midiToHz } from '@/core/theory.ts'
+import { clamp01, lerp } from '@/core/curves.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export interface BassParams {
   decay: number

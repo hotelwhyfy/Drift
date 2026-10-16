@@ -1,4 +1,4 @@
-import type { Chord, Mode } from '../core/theory.ts'
+import type { Chord, Mode } from '@/core/theory.ts'
 
 export type Role = 'bass' | 'chordal' | 'melodic' | 'colour'
 

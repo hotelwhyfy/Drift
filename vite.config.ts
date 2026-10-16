@@ -5,6 +5,7 @@ import { fileDialogs } from './scripts/fileDialogs.ts'
 
 export default defineConfig({
   plugins: [react(), fileDialogs()],
+  resolve: { alias: { '@': resolve(import.meta.dirname, 'src') } },
   worker: { format: 'es' },
   build: {
     rollupOptions: {

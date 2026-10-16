@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { released } from './released.ts'
+import { released } from '@/ui/released.ts'
 
 interface DialProps {
   label: string

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { interpret, restingPlace } from '../src/mood/interpret.ts'
-import { arrangementFor, macrosFor, rackFor } from '../src/mood/arrange.ts'
-import { Journey, journeyEase, blendMacros } from '../src/mood/journey.ts'
-import { PROMPTS } from '../src/mood/prompts.ts'
-import { MOOD_WORDS, MOOD_PHRASES } from '../src/mood/moodLexicon.ts'
-import { Engine } from '../src/engine/engine.ts'
-import { MACRO_KEYS } from '../src/macros/macros.ts'
+import { interpret, restingPlace } from '@/mood/interpret.ts'
+import { arrangementFor, macrosFor, rackFor } from '@/mood/arrange.ts'
+import { Journey, journeyEase, blendMacros } from '@/mood/journey.ts'
+import { PROMPTS } from '@/mood/prompts.ts'
+import { MOOD_WORDS, MOOD_PHRASES } from '@/mood/moodLexicon.ts'
+import { Engine } from '@/engine/engine.ts'
+import { MACRO_KEYS } from '@/macros/macros.ts'
 
 describe('reading an answer', () => {
   it('hears intensity, diminishment and negation', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Prompt } from '../../mood/prompts.ts'
+import type { Prompt } from '@/mood/prompts.ts'
 
 interface Props {
   prompt: Prompt

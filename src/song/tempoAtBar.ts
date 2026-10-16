@@ -1,7 +1,7 @@
-import type { Song } from './types.ts'
-import { macrosAt } from './macrosAt.ts'
-import type { Macros } from '../macros/macros.ts'
-import { buildPatch } from '../macros/patch.ts'
+import type { Song } from '@/song/types.ts'
+import { macrosAt } from '@/song/macrosAt.ts'
+import type { Macros } from '@/macros/macros.ts'
+import { buildPatch } from '@/macros/patch.ts'
 
 /**
  * The tempo a bar is played at. Read at the downbeat — a bar's length is fixed

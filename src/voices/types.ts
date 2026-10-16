@@ -1,4 +1,4 @@
-import type { Stereo } from '../core/types.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export const stereo = (): Stereo => [0, 0]
 

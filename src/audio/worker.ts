@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
-import { Engine } from '../engine/engine.ts'
-import type { ToWorker, FromWorker } from './messages.ts'
-import { captureWav } from './captureWav.ts'
+import { Engine } from '@/engine/engine.ts'
+import type { ToWorker, FromWorker } from '@/audio/messages.ts'
+import { captureWav } from '@/audio/captureWav.ts'
 
 /**
  * The engine lives here, off the main thread.

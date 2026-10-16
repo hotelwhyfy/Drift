@@ -1,9 +1,9 @@
-import { Engine } from '../engine/engine.ts'
-import type { Macros } from '../macros/macros.ts'
-import type { SlotDesc } from '../engine/types.ts'
-import type { Song } from '../song/types.ts'
-import { songFrames } from '../song/songFrames.ts'
-import { WavEncoder, wavHeader } from './wav.ts'
+import { Engine } from '@/engine/engine.ts'
+import type { Macros } from '@/macros/macros.ts'
+import type { SlotDesc } from '@/engine/types.ts'
+import type { Song } from '@/song/types.ts'
+import { songFrames } from '@/song/songFrames.ts'
+import { WavEncoder, wavHeader } from '@/audio/wav.ts'
 
 /** How long a song capture keeps rendering after the last bar, for the tails. */
 export const SONG_TAIL_SECONDS = 8

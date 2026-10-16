@@ -1,13 +1,13 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
-import type { Lane, LaneSource } from '../automation/lane.ts'
-import { curveFromStroke, CURVE_RESOLUTION } from '../automation/curve.ts'
-import type { Point } from '../automation/curve.ts'
-import { EXPRESSION_INFO, EXPRESSION_KEYS } from '../fuzzy/expression.ts'
-import type { InstrumentDef } from '../instruments/types.ts'
-import { controlsOf } from '../instruments/controlsOf.ts'
-import { released } from './released.ts'
-import { Select } from './Select.tsx'
-import type { SelectOption } from './Select.tsx'
+import type { Lane, LaneSource } from '@/automation/lane.ts'
+import { curveFromStroke, CURVE_RESOLUTION } from '@/automation/curve.ts'
+import type { Point } from '@/automation/curve.ts'
+import { EXPRESSION_INFO, EXPRESSION_KEYS } from '@/fuzzy/expression.ts'
+import type { InstrumentDef } from '@/instruments/types.ts'
+import { controlsOf } from '@/instruments/controlsOf.ts'
+import { released } from '@/ui/released.ts'
+import { Select } from '@/ui/Select.tsx'
+import type { SelectOption } from '@/ui/Select.tsx'
 
 /** Follow lanes can't be made here, only kept: one is listed only while the lane is one. */
 const sourceOptions = (following: boolean): SelectOption<LaneSource['kind']>[] => {

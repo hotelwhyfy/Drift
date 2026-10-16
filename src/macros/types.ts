@@ -1,6 +1,6 @@
-import type { Mode } from '../core/theory.ts'
-import type { Expression } from '../fuzzy/expression.ts'
-import type { ProgressionStyle, Extensions } from '../song/types.ts'
+import type { Mode } from '@/core/theory.ts'
+import type { Expression } from '@/fuzzy/expression.ts'
+import type { ProgressionStyle, Extensions } from '@/song/types.ts'
 
 export interface ReverbSettings {
   size: number

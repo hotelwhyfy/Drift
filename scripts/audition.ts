@@ -8,11 +8,11 @@
  * limiting hard, and one whose RMS sits below -30 dBFS is barely there.
  */
 import { writeFileSync, mkdirSync } from 'node:fs'
-import { Engine } from '../src/engine/engine.ts'
-import { encodeWav } from '../src/audio/wav.ts'
-import { SCENES, DEFAULT_MACROS } from '../src/macros/macros.ts'
-import { deriveSeed } from '../src/core/rng.ts'
-import { buildPatch, modeNameAt } from '../src/macros/patch.ts'
+import { Engine } from '@/engine/engine.ts'
+import { encodeWav } from '@/audio/wav.ts'
+import { SCENES, DEFAULT_MACROS } from '@/macros/macros.ts'
+import { deriveSeed } from '@/core/rng.ts'
+import { buildPatch, modeNameAt } from '@/macros/patch.ts'
 
 const SAMPLE_RATE = 44100
 const argv = process.argv.slice(2)

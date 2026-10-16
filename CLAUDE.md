@@ -73,8 +73,13 @@ returns a value; none of it holds state.
 ## TypeScript
 
 - No `as` casts. Use type annotations, generics or type guards.
-- Relative imports carry the `.ts` extension, so `node --experimental-transform-types`
-  runs scripts directly without a build step.
+- Imports of anything under `src` start at the source root: `import { createRng } from '@/core/rng.ts'`,
+  never `../core/rng.ts`. Paths carry the `.ts` extension, so
+  `node --experimental-transform-types` runs scripts directly without a build
+  step. The `@/*` mapping is declared four times and must change together:
+  `tsconfig.json` `paths` (the type checker), `vite.config.ts` and
+  `vitest.config.ts` `resolve.alias`, and `scripts/aliasHooks.mjs` (plain Node,
+  loaded by `npm run audition`).
 - Exported function name matches the file name. Files exporting only types or
   data tables are exempt.
 

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { instrumentById } from '../src/instruments/registry.ts'
-import type { PatternContext } from '../src/instruments/types.ts'
-import { rngAt } from '../src/core/rng.ts'
-import { NEUTRAL } from '../src/fuzzy/expression.ts'
+import { instrumentById } from '@/instruments/registry.ts'
+import type { PatternContext } from '@/instruments/types.ts'
+import { rngAt } from '@/core/rng.ts'
+import { NEUTRAL } from '@/fuzzy/expression.ts'
 
 const EVERY = [4, 8, 16]
 

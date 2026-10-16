@@ -1,6 +1,6 @@
-import { LaneEvaluator } from './lane.ts'
-import type { SongLane } from './songLaneFor.ts'
-import { sampleEnvelope } from '../song/sampleEnvelope.ts'
+import { LaneEvaluator } from '@/automation/lane.ts'
+import type { SongLane } from '@/automation/songLaneFor.ts'
+import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
 
 const lanes = new LaneEvaluator()
 

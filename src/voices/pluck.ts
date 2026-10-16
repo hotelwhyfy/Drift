@@ -1,10 +1,10 @@
-import { Adsr, Decay } from '../dsp/env.ts'
-import { Phasor, sawFrom, squareFrom } from '../dsp/osc.ts'
-import { Svf } from '../dsp/svf.ts'
-import { panGains, clamp01, lerp } from '../core/curves.ts'
-import { midiToHz } from '../core/theory.ts'
-import type { Rng } from '../core/rng.ts'
-import type { Stereo } from '../core/types.ts'
+import { Adsr, Decay } from '@/dsp/env.ts'
+import { Phasor, sawFrom, squareFrom } from '@/dsp/osc.ts'
+import { Svf } from '@/dsp/svf.ts'
+import { panGains, clamp01, lerp } from '@/core/curves.ts'
+import { midiToHz } from '@/core/theory.ts'
+import type { Rng } from '@/core/rng.ts'
+import type { Stereo } from '@/core/types.ts'
 
 export interface PluckParams {
   /** 0..1 — saw at 0, square at 1. */

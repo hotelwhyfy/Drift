@@ -1,7 +1,7 @@
-import type { Macros } from '../macros/macros.ts'
-import type { EngineSnapshot, SlotDesc } from '../engine/types.ts'
-import type { Song } from '../song/types.ts'
-import type { CaptureRequest } from './captureWav.ts'
+import type { Macros } from '@/macros/macros.ts'
+import type { EngineSnapshot, SlotDesc } from '@/engine/types.ts'
+import type { Song } from '@/song/types.ts'
+import type { CaptureRequest } from '@/audio/captureWav.ts'
 
 /**
  * `epoch` counts seeks. Audio rendered before a seek can still be in flight

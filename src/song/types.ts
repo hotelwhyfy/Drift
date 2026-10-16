@@ -1,4 +1,4 @@
-import type { MacroKey } from '../macros/macros.ts'
+import type { MacroKey } from '@/macros/macros.ts'
 
 /** How the segment *leaving* a breakpoint travels to the next one. */
 export type BreakpointShape = 'linear' | 'smooth' | 'step'

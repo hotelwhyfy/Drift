@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { Engine } from '../src/engine/engine.ts'
-import { Rack } from '../src/engine/rack.ts'
-import { DEFAULT_RACK } from '../src/engine/engine.ts'
-import type { HarmonicContext } from '../src/harmony/types.ts'
-import { MODES } from '../src/core/theory.ts'
-import { SCENES, DEFAULT_MACROS } from '../src/macros/macros.ts'
-import { deriveSeed } from '../src/core/rng.ts'
+import { Engine } from '@/engine/engine.ts'
+import { Rack } from '@/engine/rack.ts'
+import { DEFAULT_RACK } from '@/engine/engine.ts'
+import type { HarmonicContext } from '@/harmony/types.ts'
+import { MODES } from '@/core/theory.ts'
+import { SCENES, DEFAULT_MACROS } from '@/macros/macros.ts'
+import { deriveSeed } from '@/core/rng.ts'
 
 const SR = 24000
 

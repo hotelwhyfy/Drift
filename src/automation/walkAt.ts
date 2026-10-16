@@ -1,5 +1,5 @@
-import { rngAt } from '../core/rng.ts'
-import { clamp01 } from '../core/curves.ts'
+import { rngAt } from '@/core/rng.ts'
+import { clamp01 } from '@/core/curves.ts'
 
 /**
  * A bounded random walk, read at a musical position.

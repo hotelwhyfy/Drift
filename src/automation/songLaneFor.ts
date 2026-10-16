@@ -1,5 +1,5 @@
-import type { Lane, LaneTarget } from './lane.ts'
-import type { Envelope } from '../song/types.ts'
+import type { Lane, LaneTarget } from '@/automation/lane.ts'
+import type { Envelope } from '@/song/types.ts'
 
 /** A lane laid out on the song's timeline. */
 export type SongLane = Lane & { source: { kind: 'song'; envelope: Envelope } }

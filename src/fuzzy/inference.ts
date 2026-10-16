@@ -1,8 +1,8 @@
-import type { MembershipFn } from './membership.ts'
-import { threeTerms } from './membership.ts'
-import type { Expression, ExpressionKey } from './expression.ts'
-import { EXPRESSION_KEYS } from './expression.ts'
-import type { Rule, RuleBase } from './types.ts'
+import type { MembershipFn } from '@/fuzzy/membership.ts'
+import { threeTerms } from '@/fuzzy/membership.ts'
+import type { Expression, ExpressionKey } from '@/fuzzy/expression.ts'
+import { EXPRESSION_KEYS } from '@/fuzzy/expression.ts'
+import type { Rule, RuleBase } from '@/fuzzy/types.ts'
 
 /**
  * Mamdani fuzzy inference.

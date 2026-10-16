@@ -1,6 +1,6 @@
-import type { Macros } from '../macros/macros.ts'
-import { MACRO_KEYS } from '../macros/macros.ts'
-import { clamp01 } from '../core/curves.ts'
+import type { Macros } from '@/macros/macros.ts'
+import { MACRO_KEYS } from '@/macros/macros.ts'
+import { clamp01 } from '@/core/curves.ts'
 
 /**
  * The one-way move from where someone is to somewhere calmer.

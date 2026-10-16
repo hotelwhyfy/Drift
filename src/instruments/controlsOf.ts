@@ -1,4 +1,4 @@
-import type { ControlSpec, InstrumentDef } from './types.ts'
+import type { ControlSpec, InstrumentDef } from '@/instruments/types.ts'
 
 /**
  * The knobs for an instrument: its declared controls, or one per rule output

@@ -1,6 +1,6 @@
-import type { HarmonySection } from './types.ts'
-import type { ComposeSettings } from '../macros/types.ts'
-import { MODES } from '../core/theory.ts'
+import type { HarmonySection } from '@/song/types.ts'
+import type { ComposeSettings } from '@/macros/types.ts'
+import { MODES } from '@/core/theory.ts'
 
 /**
  * The dials' compose settings with a harmony section laid over them. Anything
