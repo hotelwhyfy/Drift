@@ -6,7 +6,7 @@ import { songLaneFor } from '../src/automation/songLaneFor.ts'
 import type { SongLane } from '../src/automation/songLaneFor.ts'
 import { recordInto } from '../src/automation/recordInto.ts'
 import { drivenValue } from '../src/automation/drivenValue.ts'
-import type { Breakpoint } from '../src/song/song.ts'
+import type { Breakpoint } from '../src/song/types.ts'
 
 const lanes = new LaneEvaluator()
 

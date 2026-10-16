@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { readProject, writeProject, projectFilename } from '../src/project/project.ts'
-import type { SlotDesc } from '../src/engine/rack.ts'
+import type { SlotDesc } from '../src/engine/types.ts'
 import { DEFAULT_MACROS } from '../src/macros/macros.ts'
 import { NEUTRAL } from '../src/fuzzy/expression.ts'
 import { curveFromStroke } from '../src/automation/curve.ts'
 import { DEFAULT_SONG } from '../src/song/song.ts'
-import type { Song } from '../src/song/song.ts'
+import type { Song } from '../src/song/types.ts'
 
 function slot(overrides: Partial<SlotDesc> = {}): SlotDesc {
   return {

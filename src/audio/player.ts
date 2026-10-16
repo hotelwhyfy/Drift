@@ -1,8 +1,7 @@
 import type { Macros } from '../macros/macros.ts'
-import type { SlotDesc } from '../engine/rack.ts'
-import type { EngineSnapshot } from '../engine/engine.ts'
+import type { SlotDesc, EngineSnapshot } from '../engine/types.ts'
 import type { ToWorker, FromWorker } from './messages.ts'
-import type { Song } from '../song/song.ts'
+import type { Song } from '../song/types.ts'
 import { DEFAULT_SONG } from '../song/song.ts'
 
 /**

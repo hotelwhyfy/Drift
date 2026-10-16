@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Rack } from '../src/engine/rack.ts'
-import type { SlotDesc } from '../src/engine/rack.ts'
+import type { SlotDesc } from '../src/engine/types.ts'
 import { makeLane } from '../src/automation/lane.ts'
 import type { Lane } from '../src/automation/lane.ts'
 import { flatCurve } from '../src/automation/curve.ts'

@@ -1,4 +1,4 @@
-import type { Song } from './song.ts'
+import type { Song } from './types.ts'
 import { tempoAtBar } from './tempoAtBar.ts'
 import type { Macros } from '../macros/macros.ts'
 import { barLengthSamples } from '../engine/barLengthSamples.ts'

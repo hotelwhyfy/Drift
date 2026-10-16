@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Engine } from '../src/engine/engine.ts'
-import type { ScheduledEvent, SlotDesc } from '../src/engine/rack.ts'
+import type { ScheduledEvent, SlotDesc } from '../src/engine/types.ts'
 import { Harmony } from '../src/compose/harmony.ts'
 import { walkAt } from '../src/automation/walkAt.ts'
 import { makeLane } from '../src/automation/lane.ts'

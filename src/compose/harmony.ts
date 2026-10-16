@@ -1,7 +1,7 @@
 import { rngAt } from '../core/rng.ts'
 import { buildChord, nextDegree, voiceNear } from '../core/theory.ts'
 import type { Chord } from '../core/theory.ts'
-import type { ComposeSettings } from '../macros/patch.ts'
+import type { ComposeSettings } from '../macros/types.ts'
 
 /** The compose settings in effect at a bar. Must be a pure function of the bar. */
 export type SettingsAt = (bar: number) => ComposeSettings

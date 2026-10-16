@@ -1,5 +1,5 @@
 import type { InstrumentDef, InstrumentVoice, PatternContext, PercussionEvent, FixedParam } from './types.ts'
-import type { NoteIntent } from '../harmony/resolver.ts'
+import type { NoteIntent } from '../harmony/types.ts'
 import { beatStrength } from '../harmony/resolver.ts'
 import { Keys } from '../voices/keys.ts'
 import { Pad } from '../voices/pad.ts'

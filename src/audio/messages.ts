@@ -1,7 +1,6 @@
 import type { Macros } from '../macros/macros.ts'
-import type { EngineSnapshot } from '../engine/engine.ts'
-import type { SlotDesc } from '../engine/rack.ts'
-import type { Song } from '../song/song.ts'
+import type { EngineSnapshot, SlotDesc } from '../engine/types.ts'
+import type { Song } from '../song/types.ts'
 import type { CaptureRequest } from './captureWav.ts'
 
 /**

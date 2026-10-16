@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Song, HarmonySection } from '../song/song.ts'
+import type { Song, HarmonySection } from '../song/types.ts'
 import { PROGRESSION_STYLES, EXTENSIONS, CHORD_BAR_CHOICES, autoSection } from '../song/song.ts'
 import { MODES, NOTE_NAMES } from '../core/theory.ts'
 import type { Mode } from '../core/theory.ts'

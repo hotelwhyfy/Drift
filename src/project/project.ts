@@ -1,6 +1,6 @@
-import type { Macros } from '../macros/macros.ts'
+import type { Macros, MacroKey } from '../macros/macros.ts'
 import { DEFAULT_MACROS, MACRO_KEYS } from '../macros/macros.ts'
-import type { SlotDesc } from '../engine/rack.ts'
+import type { SlotDesc } from '../engine/types.ts'
 import type { Lane, LaneSource, LaneTarget, LaneMode } from '../automation/lane.ts'
 import { curveFromPoints, flatCurve } from '../automation/curve.ts'
 import type { Expression } from '../fuzzy/expression.ts'
@@ -12,8 +12,7 @@ import {
   DEFAULT_SONG, MAX_SONG_BARS, MIN_TUNING, MAX_TUNING, BREAKPOINT_SHAPES, PROGRESSION_STYLES, EXTENSIONS,
   CHORD_BAR_CHOICES,
 } from '../song/song.ts'
-import type { Song, Envelope, Breakpoint, MacroTrack, HarmonySection, SongEnd } from '../song/song.ts'
-import type { MacroKey } from '../macros/macros.ts'
+import type { Song, Envelope, Breakpoint, MacroTrack, HarmonySection, SongEnd } from '../song/types.ts'
 import { MODES } from '../core/theory.ts'
 
 /** Loop lengths are clamped here; far longer than any sensible loop, short of absurd. */

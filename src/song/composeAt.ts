@@ -1,5 +1,5 @@
-import type { HarmonySection } from './song.ts'
-import type { ComposeSettings } from '../macros/patch.ts'
+import type { HarmonySection } from './types.ts'
+import type { ComposeSettings } from '../macros/types.ts'
 import { MODES } from '../core/theory.ts'
 
 /**

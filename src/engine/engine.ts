@@ -1,25 +1,25 @@
 import { createRng, deriveSeed } from '../core/rng.ts'
 import { clamp01 } from '../core/curves.ts'
-import type { Stereo } from '../voices/types.ts'
+import type { Stereo } from '../core/types.ts'
 import { Reverb } from '../dsp/reverb.ts'
 import { WowFlutter, Saturator, Limiter } from '../dsp/tape.ts'
 import { Chorus, PingPong, Ducker } from '../dsp/modfx.ts'
 import { Svf } from '../dsp/svf.ts'
 import { Harmony } from '../compose/harmony.ts'
 import { Rack } from './rack.ts'
-import type { SlotState, ScheduledEvent, SlotReadout } from './rack.ts'
+import type { SlotState, ScheduledEvent, EngineSnapshot } from './types.ts'
 import { buildPatch } from '../macros/patch.ts'
-import type { Patch, ComposeSettings } from '../macros/patch.ts'
+import type { Patch, ComposeSettings } from '../macros/types.ts'
 import type { Macros } from '../macros/macros.ts'
 import { MACRO_KEYS } from '../macros/macros.ts'
 import { barLengthSamples } from './barLengthSamples.ts'
 import { DEFAULT_SONG } from '../song/song.ts'
-import type { Song } from '../song/song.ts'
+import type { Song } from '../song/types.ts'
 import { macrosAt } from '../song/macrosAt.ts'
 import { sectionAt } from '../song/sectionAt.ts'
 import { composeAt } from '../song/composeAt.ts'
 
-import type { HarmonicContext } from '../harmony/resolver.ts'
+import type { HarmonicContext } from '../harmony/types.ts'
 
 /** Samples between control-rate updates, on a grid that restarts every bar. */
 const CONTROL_BLOCK = 64
@@ -30,24 +30,6 @@ const CONTROL_BLOCK = 64
  * and percussive instruments are a click away, not a default.
  */
 export const DEFAULT_RACK = ['pad', 'strings', 'shimmer', 'sub', 'bed', 'dust'] as const
-
-export interface EngineSnapshot {
-  bar: number
-  barPhase: number
-  chordDegree: number
-  chordNotes: readonly number[]
-  peak: number
-  rms: number
-  /** Per-slot state after automation, for the interface to display. */
-  slots: SlotReadout[]
-  /** The six dials as the music has them now — the song's where it drives them. */
-  macros: Macros
-  tempo: number
-  modeName: string
-  rootMidi: number
-  /** A song set to stop has reached its end; only tails remain. */
-  ended: boolean
-}
 
 /** Everything after the rack: one shared room, the tape, the limiter. */
 interface MasterChain {

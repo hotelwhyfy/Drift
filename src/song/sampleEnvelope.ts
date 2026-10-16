@@ -1,4 +1,4 @@
-import type { Envelope } from './song.ts'
+import type { Envelope } from './types.ts'
 
 /**
  * An envelope's value at a bar. Before the first point it holds the first

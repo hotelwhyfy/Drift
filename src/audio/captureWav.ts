@@ -1,7 +1,7 @@
 import { Engine } from '../engine/engine.ts'
 import type { Macros } from '../macros/macros.ts'
-import type { SlotDesc } from '../engine/rack.ts'
-import type { Song } from '../song/song.ts'
+import type { SlotDesc } from '../engine/types.ts'
+import type { Song } from '../song/types.ts'
 import { songFrames } from '../song/songFrames.ts'
 import { WavEncoder, wavHeader } from './wav.ts'
 

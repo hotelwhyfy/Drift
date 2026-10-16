@@ -7,7 +7,7 @@
 import { clamp, clamp01 } from './curves.ts'
 import type { Rng } from './rng.ts'
 import { pickWeighted } from './rng.ts'
-import type { Extensions } from '../song/song.ts'
+import type { Extensions } from '../song/types.ts'
 
 export interface Mode {
   readonly name: string

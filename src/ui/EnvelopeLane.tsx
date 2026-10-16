@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Envelope, Breakpoint } from '../song/song.ts'
+import type { Envelope, Breakpoint } from '../song/types.ts'
 import { BREAKPOINT_SHAPES } from '../song/song.ts'
 import { sampleEnvelope } from '../song/sampleEnvelope.ts'
 import type { BarScale } from './barScale.ts'

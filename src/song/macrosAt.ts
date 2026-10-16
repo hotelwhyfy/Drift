@@ -1,4 +1,4 @@
-import type { Song } from './song.ts'
+import type { Song } from './types.ts'
 import { sampleEnvelope } from './sampleEnvelope.ts'
 import type { Macros, MacroKey } from '../macros/macros.ts'
 import { MACRO_KEYS } from '../macros/macros.ts'

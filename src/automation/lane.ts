@@ -1,7 +1,7 @@
 import { sampleCurve, flatCurve } from './curve.ts'
 import type { Curve } from './curve.ts'
 import { walkAt } from './walkAt.ts'
-import type { Envelope } from '../song/song.ts'
+import type { Envelope } from '../song/types.ts'
 import { sampleEnvelope } from '../song/sampleEnvelope.ts'
 import type { ExpressionKey } from '../fuzzy/expression.ts'
 

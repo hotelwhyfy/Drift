@@ -1,4 +1,4 @@
-import type { Song } from './song.ts'
+import type { Song } from './types.ts'
 import { macrosAt } from './macrosAt.ts'
 import type { Macros } from '../macros/macros.ts'
 import { buildPatch } from '../macros/patch.ts'

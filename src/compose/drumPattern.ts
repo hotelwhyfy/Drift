@@ -1,5 +1,5 @@
 import type { PatternContext, PercussionEvent } from '../instruments/types.ts'
-import type { DrumHit } from '../voices/drums.ts'
+import type { DrumHit } from '../core/types.ts'
 import { DRUM_STYLES, FILL_EVERY } from './drumStyles.ts'
 import { beatStrength } from '../harmony/resolver.ts'
 import { clamp01, lerp } from '../core/curves.ts'

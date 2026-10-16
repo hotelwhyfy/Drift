@@ -4,71 +4,16 @@ import { FuzzyEngine } from '../fuzzy/inference.ts'
 import type { Expression } from '../fuzzy/expression.ts'
 import { EXPRESSION_KEYS, NEUTRAL, clampExpression } from '../fuzzy/expression.ts'
 import { LaneEvaluator } from '../automation/lane.ts'
-import type { Lane, LaneContext } from '../automation/lane.ts'
+import type { LaneContext } from '../automation/lane.ts'
 import { Resolver } from '../harmony/resolver.ts'
-import type { HarmonicContext, Role } from '../harmony/resolver.ts'
+import type { HarmonicContext, Role } from '../harmony/types.ts'
 import { createRng, deriveSeed, rngAt, centred } from '../core/rng.ts'
-import type { Stereo } from '../voices/types.ts'
-import type { DrumHit } from '../voices/drums.ts'
+import type { Stereo } from '../core/types.ts'
 import { clamp01 } from '../core/curves.ts'
 import { paramSpecOf } from '../instruments/paramSpecOf.ts'
 import { normaliseParam } from '../fuzzy/normaliseParam.ts'
 import { denormaliseParam } from '../fuzzy/denormaliseParam.ts'
-
-/**
- * A serialisable description of one slot. The interface owns this; the rack
- * reconciles itself to it.
- *
- * Mirroring state between a worker and the UI is a reliable source of bugs, so
- * there is only one authority: the UI sends what the rack should be, and the
- * rack works out the difference. Adding an instrument and dragging its level
- * go through the same path, which means there is one path to get right.
- */
-export interface SlotDesc {
-  readonly id: string
-  readonly defId: string
-  readonly name: string
-  readonly level: number
-  readonly muted: boolean
-  readonly soloed: boolean
-  readonly expression: Expression
-  readonly follow: number
-  readonly lanes: Lane[]
-  /**
-   * Direct settings, normalised 0..1 across each parameter's range. A
-   * parameter with no entry is left to the rules; one with an entry overrides
-   * them, and lanes then automate relative to it.
-   */
-  readonly knobs: Readonly<Record<string, number>>
-}
-
-export interface SlotState {
-  readonly id: string
-  readonly defId: string
-  name: string
-  level: number
-  muted: boolean
-  soloed: boolean
-  /** The instrument's own expression, before automation. */
-  expression: Expression
-  /** 0 = entirely its own expression, 1 = entirely the global one. */
-  follow: number
-  lanes: Lane[]
-  knobs: Readonly<Record<string, number>>
-}
-
-/** What a slot is doing right now, for the interface to show. */
-export interface SlotReadout {
-  readonly id: string
-  readonly expression: Expression
-  readonly level: number
-  /** Loudest sample since the last readout, after level, mute and solo. */
-  readonly peak: number
-  /** RMS over the same span. Both are the instrument's dry contribution, before the room. */
-  readonly rms: number
-  /** Every parameter, normalised 0..1 — what an untouched knob would read. */
-  readonly params: Readonly<Record<string, number>>
-}
+import type { SlotDesc, SlotState, SlotReadout, ScheduledEvent } from './types.ts'
 
 interface Slot extends SlotState {
   readonly def: InstrumentDef
@@ -86,16 +31,6 @@ interface Slot extends SlotState {
   meterPeak: number
   meterSq: number
   meterCount: number
-}
-
-export interface ScheduledEvent {
-  /** Samples from the start of the bar. */
-  offset: number
-  slotId: string
-  midi?: number
-  hit?: DrumHit
-  velocity: number
-  durationSec: number
 }
 
 /** Resolution order. Low parts claim their pitches before high ones, because

@@ -1,4 +1,4 @@
-import type { OutputSpec } from './inference.ts'
+import type { OutputSpec } from './types.ts'
 import { clamp01 } from '../core/curves.ts'
 
 /** 0..1 across a parameter's range → its real value, respecting its scale. */
