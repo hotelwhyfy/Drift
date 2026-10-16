@@ -1,23 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Dial } from '@/ui/Dial.tsx'
-import { Tooltip } from '@/ui/Tooltip.tsx'
 import { SeedField } from '@/ui/SeedField.tsx'
 import { Visualizer } from '@/ui/Visualizer.tsx'
+import { Dials } from '@/ui/Dials.tsx'
+import { FileActions } from '@/ui/FileActions.tsx'
+import { CaptureControls } from '@/ui/CaptureControls.tsx'
 import { Player } from '@/audio/player.ts'
-import { MACRO_INFO, DEFAULT_MACROS, SCENES } from '@/macros/macros.ts'
+import { SCENES } from '@/macros/macros.ts'
 import type { Macros, MacroKey } from '@/macros/macros.ts'
 import { buildPatch, expressionFor } from '@/macros/patch.ts'
 import { RackView } from '@/ui/RackView.tsx'
 import type { SlotDesc, EngineSnapshot } from '@/engine/types.ts'
-import { DEFAULT_RACK } from '@/engine/engine.ts'
-import { instrumentById } from '@/instruments/registry.ts'
-import { NEUTRAL } from '@/fuzzy/expression.ts'
-import { readProject, writeProject, projectFilename } from '@/project/project.ts'
-import { saveTextFile, openTextFile, openWavSink, isCancellation, stripExtension } from '@/project/filePicker.ts'
-import type { FileSink } from '@/project/filePicker.ts'
 import { deriveSeed } from '@/core/rng.ts'
 import { Timeline } from '@/ui/Timeline.tsx'
-import { DEFAULT_SONG } from '@/song/song.ts'
 import type { Song } from '@/song/types.ts'
 import { macrosAt } from '@/song/macrosAt.ts'
 import { setPointAt } from '@/song/setPointAt.ts'
@@ -27,138 +21,18 @@ import { composeAt } from '@/song/composeAt.ts'
 import { HarmonyRow } from '@/ui/HarmonyRow.tsx'
 import { generateDrift } from '@/generate/generateDrift.ts'
 import { NOTE_NAMES } from '@/core/theory.ts'
-import { MACRO_COLOURS } from '@/ui/laneColours.ts'
-import { UndoHistory } from '@/ui/undoHistory.ts'
-import { released } from '@/ui/released.ts'
-
-const CAPTURE_LENGTHS = [1, 3, 10, 30]
-/**
- * A capture streams to disk, so memory does not limit it; the WAV format does.
- * Its sizes are 32-bit, which at 48 kHz stereo 16-bit is a little over six
- * hours.
- */
-const MAX_CAPTURE_MINUTES = 360
-const MIN_CAPTURE_MINUTES = 0.25
-
-/** A typed length in minutes, or null when it is not one. */
-function parseMinutes(text: string): number | null {
-  const n = Number(text.trim())
-  if (!Number.isFinite(n) || n <= 0) return null
-  return Math.min(MAX_CAPTURE_MINUTES, Math.max(MIN_CAPTURE_MINUTES, Math.round(n * 4) / 4))
-}
-const STORAGE_KEY = 'drift.state.v1'
-
-/** Words for the seed, so a world can be remembered and typed back in. */
-const SEED_WORDS = [
-  'amber', 'ash', 'bloom', 'cedar', 'dusk', 'ember', 'fern', 'glass', 'haze',
-  'ivory', 'jade', 'kelp', 'linen', 'moss', 'night', 'ochre', 'pearl', 'quill',
-  'rain', 'slate', 'tide', 'umber', 'vellum', 'willow', 'yarrow', 'zephyr',
-]
-
-function randomSeedName(): string {
-  const a = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)]
-  const b = SEED_WORDS[Math.floor(Math.random() * SEED_WORDS.length)]
-  const n = Math.floor(Math.random() * 90 + 10)
-  return `${a}-${b}-${n}`
-}
-
-interface Session {
-  macros: Macros
-  seedName: string
-  slots: SlotDesc[]
-  song: Song
-  projectName: string
-}
-
-/** The rack the six dials were tuned against. */
-function defaultSlots(): SlotDesc[] {
-  return DEFAULT_RACK.map((defId, i) => ({
-    id: `${defId}-${i}`,
-    defId,
-    name: instrumentById(defId)?.name ?? defId,
-    level: 0.8,
-    muted: false,
-    soloed: false,
-    expression: { ...NEUTRAL },
-    // Following the dials completely by default, so the app behaves as a
-    // six-dial instrument until someone deliberately breaks a slot away.
-    follow: 1,
-    lanes: [],
-    knobs: {},
-  }))
-}
-
-function blankSession(): Session {
-  return {
-    macros: DEFAULT_MACROS,
-    seedName: randomSeedName(),
-    slots: defaultSlots(),
-    song: DEFAULT_SONG,
-    projectName: 'untitled',
-  }
-}
-
-/**
- * The autosave is a project file.
- *
- * It used to be its own ad-hoc JSON shape, which quietly lost every drawn
- * automation curve on reload: `JSON.stringify` turns a Float32Array into an
- * object with numeric keys and no length, and nothing on the way back in
- * checked. Sharing one serialiser with the save/open path means there is a
- * single piece of code to get right, and it is the one with tests.
- */
-function loadSession(): Session {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const { project } = readProject(raw)
-      return {
-        macros: project.macros,
-        seedName: project.seedName,
-        slots: project.slots.length > 0 ? project.slots : defaultSlots(),
-        song: project.song,
-        projectName: project.name,
-      }
-    }
-  } catch {
-    // A corrupt, blocked or older store is not a reason to fail to start.
-  }
-  return blankSession()
-}
-
-/**
- * Accent colour follows the Colour macro — indigo when the harmony is modal and
- * dark, amber when it opens up. Tying the one piece of colour in the interface
- * to the one macro that changes the mood means the screen agrees with the
- * speakers without anyone having to read a label.
- */
-function accentFor(colour: number): string {
-  // Around the warm side of the wheel — indigo, violet, rose, amber. The
-  // direct route from indigo to amber runs through green, which reads as
-  // clinical and belongs to a different kind of music entirely.
-  const hue = (248 + colour * 152) % 360
-  const sat = 40 + colour * 28
-  const light = 58 + colour * 7
-  return hslToHex(hue, sat, light)
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  const a = (s / 100) * Math.min(l / 100, 1 - l / 100)
-  const f = (n: number): string => {
-    const k = (n + h / 30) % 12
-    const c = l / 100 - a * Math.max(-1, Math.min(Math.min(k - 3, 9 - k), 1))
-    return Math.round(255 * c).toString(16).padStart(2, '0')
-  }
-  return `#${f(0)}${f(8)}${f(4)}`
-}
-
-/** How long the document must sit still before it counts as one undoable step. */
-const SETTLE_MS = 400
-
-/** Whether two sessions are the same piece. The name is not part of it: renaming is not an edit. */
-function samePiece(a: Session, b: Session): boolean {
-  return a.macros === b.macros && a.seedName === b.seedName && a.slots === b.slots && a.song === b.song
-}
+import { accentFor } from '@/ui/accent.ts'
+import { loadSession } from '@/ui/loadSession.ts'
+import { randomSeedName } from '@/ui/randomSeedName.ts'
+import type { Session } from '@/ui/types.ts'
+import { useNotice } from '@/ui/hooks/useNotice.ts'
+import { useAutosave } from '@/ui/hooks/useAutosave.ts'
+import { useSessionHistory } from '@/ui/hooks/useSessionHistory.ts'
+import { useProjectFiles } from '@/ui/hooks/useProjectFiles.ts'
+import { useCapture } from '@/ui/hooks/useCapture.ts'
+import type { CaptureLength } from '@/ui/hooks/useCapture.ts'
+import { useFileDrop } from '@/ui/hooks/useFileDrop.ts'
+import { useShortcuts } from '@/ui/hooks/useShortcuts.ts'
 
 export function App() {
   const initial = useMemo(loadSession, [])
@@ -168,18 +42,12 @@ export function App() {
   const [playing, setPlaying] = useState(false)
   const [snapshot, setSnapshot] = useState<EngineSnapshot | null>(null)
   const [captureProgress, setCaptureProgress] = useState<number | null>(null)
-  /** Minutes, or 'song' for the song once through. */
-  const [captureLength, setCaptureLength] = useState<number | 'song'>('song')
-  /** What is in the minutes field while it is being typed in. */
-  const [minutesDraft, setMinutesDraft] = useState('')
+  const [captureLength, setCaptureLength] = useState<CaptureLength>('song')
   const [song, setSong] = useState<Song>(initial.song)
   /** Where playback starts from, and where the playhead rests when stopped. */
   const [cursor, setCursor] = useState(0)
   const [projectName, setProjectName] = useState(initial.projectName)
-  /** The toast, and what its Undo puts back if it offers one. One state, so a
-   *  later notice can never show an earlier one's Undo. */
-  const [notice, setNotice] = useState<{ text: string, undo: Session | null } | null>(null)
-  const say = useCallback((text: string, undo: Session | null = null) => setNotice({ text, undo }), [])
+  const { notice, say } = useNotice()
   const playerRef = useRef<Player | null>(null)
 
   const playhead = playing && snapshot ? snapshot.bar + snapshot.barPhase : cursor
@@ -241,115 +109,24 @@ export function App() {
     if (last?.ended) setCursor(0)
   }, [playing])
 
-  useEffect(() => {
-    // Debounced: dragging a dial fires this every frame, and serialising every
-    // automation curve at 60 Hz is wasted work.
-    const timer = window.setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, writeProject(
-          { name: projectName, macros, seedName, slots, song },
-          new Date().toISOString(),
-        ))
-      } catch {
-        // Private browsing. Losing the setting is survivable; crashing is not.
-      }
-    }, 400)
-    return () => window.clearTimeout(timer)
-  }, [macros, seedName, slots, song, projectName])
-
-  /**
-   * Undo history. A step is the document once it has settled: nothing changed
-   * for SETTLE_MS and no pointer is held down. Dragging a dial or drawing a
-   * curve sets state every frame, and undo should take back the gesture, not
-   * one frame of it.
-   */
-  const historyRef = useRef<UndoHistory<Session> | null>(null)
-  if (historyRef.current === null) historyRef.current = new UndoHistory(initial)
-  const history = historyRef.current
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
   const session = useMemo<Session>(
     () => ({ macros, seedName, slots, song, projectName }),
     [macros, seedName, slots, song, projectName],
   )
-  const sessionRef = useRef(session)
-  sessionRef.current = session
-  const pointerDown = useRef(false)
-  /** Set by whole-session replacements, so they are a step of their own. */
-  const settleNow = useRef(false)
-
-  const settle = useCallback(() => {
-    const now = sessionRef.current
-    if (samePiece(history.current, now)) history.replace(now)
-    else history.record(now)
-    setCanUndo(history.canUndo)
-    setCanRedo(history.canRedo)
-  }, [history])
-
-  useEffect(() => {
-    if (samePiece(history.current, session)) {
-      history.replace(session)
-      settleNow.current = false
-      return
-    }
-    if (settleNow.current) {
-      settleNow.current = false
-      settle()
-      return
-    }
-    // Still dragging: the pointerup listener below settles it instead.
-    const timer = window.setTimeout(() => { if (!pointerDown.current) settle() }, SETTLE_MS)
-    return () => window.clearTimeout(timer)
-  }, [session, history, settle])
-
-  useEffect(() => {
-    // Capture phase, so a control that stops propagation cannot hide a release.
-    const down = (): void => { pointerDown.current = true }
-    const up = (): void => {
-      pointerDown.current = false
-      if (!samePiece(history.current, sessionRef.current)) settle()
-    }
-    // A release that never arrived would otherwise hold the undo step open
-    // until the next click.
-    const move = (e: PointerEvent): void => { if (pointerDown.current && released(e)) up() }
-    window.addEventListener('pointerdown', down, true)
-    window.addEventListener('pointerup', up, true)
-    window.addEventListener('pointercancel', up, true)
-    window.addEventListener('pointermove', move, true)
-    return () => {
-      window.removeEventListener('pointerdown', down, true)
-      window.removeEventListener('pointerup', up, true)
-      window.removeEventListener('pointercancel', up, true)
-      window.removeEventListener('pointermove', move, true)
-    }
-  }, [history, settle])
+  useAutosave(session)
 
   /** Puts a past state back. The playhead stays where it is: undo is not a seek. */
-  const restore = useCallback((s: Session) => {
-    setMacros(s.macros)
-    setSlots(s.slots)
-    setSong(s.song)
-    setProjectName(s.projectName)
-    if (s.seedName !== sessionRef.current.seedName) {
-      setSeedName(s.seedName)
-      player.reseed(deriveSeed(s.seedName))
+  const restore = useCallback((past: Session, current: Session) => {
+    setMacros(past.macros)
+    setSlots(past.slots)
+    setSong(past.song)
+    setProjectName(past.projectName)
+    if (past.seedName !== current.seedName) {
+      setSeedName(past.seedName)
+      player.reseed(deriveSeed(past.seedName))
     }
-    setCanUndo(history.canUndo)
-    setCanRedo(history.canRedo)
-  }, [history, player])
-
-  const undoStep = useCallback(() => {
-    // An edit still settling is the step being undone, not one to lose.
-    if (!samePiece(history.current, sessionRef.current)) settle()
-    const previous = history.undo()
-    if (previous) restore(previous)
-  }, [history, settle, restore])
-
-  const redoStep = useCallback(() => {
-    if (!samePiece(history.current, sessionRef.current)) settle()
-    const next = history.redo()
-    if (next) restore(next)
-  }, [history, settle, restore])
+  }, [player])
+  const history = useSessionHistory(session, restore)
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', accent)
@@ -413,22 +190,20 @@ export function App() {
   }, [applySeed])
 
   /** Replaces everything at once: what opening a file, generating and undoing share. */
-  const applySession = useCallback((session: Session) => {
-    // Whatever was being edited is its own step, and so is the replacement.
-    if (!samePiece(history.current, sessionRef.current)) settle()
-    settleNow.current = true
-    setMacros(session.macros)
-    setSlots(session.slots)
-    setSong(session.song)
+  const applySession = useCallback((next: Session) => {
+    history.beforeReplace()
+    setMacros(next.macros)
+    setSlots(next.slots)
+    setSong(next.song)
     setCursor(0)
-    setSeedName(session.seedName)
-    setProjectName(session.projectName)
+    setSeedName(next.seedName)
+    setProjectName(next.projectName)
     if (player.isPlaying) {
       setSnapshot(null)
       player.seek(0)
     }
-    player.reseed(deriveSeed(session.seedName))
-  }, [player, history, settle])
+    player.reseed(deriveSeed(next.seedName))
+  }, [player, history.beforeReplace])
 
   /**
    * A brand-new drift: new seed, dials, rack and song. It replaces the work on
@@ -437,158 +212,28 @@ export function App() {
    * generating several in a row a chore.
    */
   const generate = useCallback(() => {
-    const previous: Session = { macros, seedName, slots, song, projectName }
     const name = randomSeedName()
     applySession({ ...generateDrift(name), seedName: name, projectName: name })
-    say(`generated ${name}`, previous)
-  }, [macros, seedName, slots, song, projectName, applySession, say])
+    say(`generated ${name}`, session)
+  }, [session, applySession, say])
 
-  const undo = useCallback(() => {
+  const undoGenerate = useCallback(() => {
     const previous = notice?.undo
     if (!previous) return
     applySession(previous)
     say(`back to ${previous.projectName}`)
   }, [notice, applySession, say])
 
-  const capture = useCallback(async () => {
-    const filename = captureLength === 'song'
-      ? `drift-${projectName !== 'untitled' ? projectName : seedName}.wav`
-      : `drift-${seedName}-${captureLength}min.wav`
-    // Where it goes is decided first, before any rendering: the file is
-    // written as the audio is made, not collected and saved at the end.
-    let sink: FileSink
-    try {
-      sink = await openWavSink(filename)
-    } catch (error) {
-      if (!isCancellation(error)) say(error instanceof Error ? error.message : 'Could not start the export.')
-      return
-    }
-    setCaptureProgress(0)
-    try {
-      await (captureLength === 'song'
-        ? player.capture('song', 0, sink.write)
-        : player.capture('minutes', captureLength * 60, sink.write))
-      await sink.close()
-      say(sink.inMemory ? `downloaded ${sink.name}` : `exported ${sink.name}`)
-    } catch (error) {
-      await sink.abort().catch(() => {})
-      say(error instanceof Error ? error.message : 'The capture failed.')
-    } finally {
-      setCaptureProgress(null)
-    }
-  }, [player, captureLength, seedName, projectName, say])
-
-  const saveProject = useCallback(async () => {
-    try {
-      const text = writeProject(
-        { name: projectName, macros, seedName, slots, song },
-        new Date().toISOString(),
-      )
-      const result = await saveTextFile(text, projectFilename(projectName))
-      if (!result) return
-      // The name the user typed in the dialog becomes the project's name.
-      setProjectName(result.name)
-      say(result.fellBack ? `downloaded ${result.name}` : `saved ${result.name}`)
-    } catch (error) {
-      if (isCancellation(error)) return
-      say(error instanceof Error ? error.message : 'Could not save.')
-    }
-  }, [projectName, macros, seedName, slots, song])
-
-  const loadProject = useCallback((text: string, filename?: string) => {
-    try {
-      const { project, warnings } = readProject(text)
-      // The filename wins over the name inside the file: it is what the user
-      // last chose to call it, and what they will look for next time.
-      const name = filename ? stripExtension(filename) : project.name
-      applySession({
-        macros: project.macros,
-        seedName: project.seedName,
-        slots: project.slots,
-        song: project.song,
-        projectName: name,
-      })
-      say(warnings.length > 0 ? warnings.join(' ') : `opened ${name}`)
-    } catch (error) {
-      say(error instanceof Error ? error.message : 'Could not open that file.')
-    }
-  }, [applySession])
-
-  const openFile = useCallback(async (file: File | null | undefined) => {
-    if (!file) return
-    loadProject(await file.text(), file.name)
-  }, [loadProject])
-
-  const openProject = useCallback(async () => {
-    try {
-      const opened = await openTextFile()
-      if (opened) loadProject(opened.text, opened.name)
-    } catch (error) {
-      if (isCancellation(error)) return
-      say(error instanceof Error ? error.message : 'Could not open that file.')
-    }
-  }, [loadProject])
-
-  // Dropping a project anywhere on the window opens it.
-  useEffect(() => {
-    const over = (e: DragEvent): void => { e.preventDefault() }
-    const drop = (e: DragEvent): void => {
-      e.preventDefault()
-      void openFile(e.dataTransfer?.files?.[0])
-    }
-    window.addEventListener('dragover', over)
-    window.addEventListener('drop', drop)
-    return () => {
-      window.removeEventListener('dragover', over)
-      window.removeEventListener('drop', drop)
-    }
-  }, [openFile])
-
-  // Notices clear themselves; they are confirmations, not state. One that
-  // offers Undo stays long enough to reach for it.
-  useEffect(() => {
-    if (!notice) return
-    const timer = window.setTimeout(() => setNotice(null), notice.undo ? 8000 : 4500)
-    return () => window.clearTimeout(timer)
-  }, [notice])
-
-  // Space toggles playback, the one shortcut worth having in an app you leave
-  // running in a background tab.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      const target = e.target
-      const typing = target instanceof HTMLElement &&
-        (target.tagName === 'INPUT' || target.isContentEditable || target.getAttribute('role') === 'slider')
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault()
-        void saveProject()
-        return
-      }
-      // A text field keeps its own undo for what is being typed into it.
-      const editingText = target instanceof HTMLElement &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      if ((e.metaKey || e.ctrlKey) && !editingText) {
-        const key = e.key.toLowerCase()
-        if (key === 'z' || (key === 'y' && !e.metaKey)) {
-          e.preventDefault()
-          if (key === 'y' || e.shiftKey) redoStep()
-          else undoStep()
-          return
-        }
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
-        e.preventDefault()
-        void openProject()
-        return
-      }
-      if (e.code === 'Space' && !typing) {
-        e.preventDefault()
-        toggle()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [toggle, saveProject, openProject, undoStep, redoStep])
+  const capture = useCapture(player, captureLength, projectName, seedName, setCaptureProgress, say)
+  const { saveProject, openProject, openFile } = useProjectFiles(session, applySession, setProjectName, say)
+  useFileDrop(openFile)
+  useShortcuts({
+    toggle,
+    save: () => void saveProject(),
+    open: () => void openProject(),
+    undo: history.undo,
+    redo: history.redo,
+  })
 
   return (
     <main className="app">
@@ -605,80 +250,28 @@ export function App() {
           <span>{(playing && snapshot ? snapshot.tempo : patch.compose.tempo).toFixed(0)} bpm</span>
           <span className="dot" />
           <span className="bar-count">bar {Math.floor(playhead) + 1} / {song.lengthBars}</span>
-          <div className="file-actions">
-            <Tooltip content={<>Undo<kbd>⌘Z</kbd></>}>
-              <button type="button" onClick={undoStep} disabled={!canUndo} aria-label="Undo">
-                <svg viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M5.5 3.5 2.5 6.5l3 3M2.5 6.5h7a4 4 0 0 1 0 8H7" />
-                </svg>
-              </button>
-            </Tooltip>
-            <Tooltip content={<>Redo<kbd>⇧⌘Z</kbd></>}>
-              <button type="button" onClick={redoStep} disabled={!canRedo} aria-label="Redo">
-                <svg viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M10.5 3.5l3 3-3 3M13.5 6.5h-7a4 4 0 0 0 0 8H9" />
-                </svg>
-              </button>
-            </Tooltip>
-            <Tooltip content="Generate a new drift">
-              <button type="button" onClick={generate} aria-label="Generate a new drift">
-                <svg viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M7 2.2 8.1 5.6 11.5 6.7 8.1 7.8 7 11.2 5.9 7.8 2.5 6.7 5.9 5.6Z M12.4 10.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5Z" />
-                </svg>
-              </button>
-            </Tooltip>
-            <Tooltip content={<>Open project<kbd>⌘O</kbd></>}>
-              <button type="button" onClick={() => void openProject()} aria-label="Open project">
-                <svg viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M1.5 12.5V4a1 1 0 0 1 1-1h3.2l1.4 1.6h6.4a1 1 0 0 1 1 1v6.9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1Z" />
-                </svg>
-              </button>
-            </Tooltip>
-            <Tooltip content={<>Save project<kbd>⌘S</kbd></>}>
-              <button type="button" onClick={() => void saveProject()} aria-label="Save project">
-                <svg viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M8 1.8v8.4M4.6 7l3.4 3.4L11.4 7M2.2 12.6v1.1a.6.6 0 0 0 .6.6h10.4a.6.6 0 0 0 .6-.6v-1.1" />
-                </svg>
-              </button>
-            </Tooltip>
-          </div>
+          <FileActions
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            onUndo={history.undo}
+            onRedo={history.redo}
+            onGenerate={generate}
+            onOpen={() => void openProject()}
+            onSave={() => void saveProject()}
+          />
         </div>
       </header>
 
       <Visualizer player={player} playing={playing} accent={accent} />
 
-      <section className="dials" aria-label="Sound controls">
-        {MACRO_INFO.map((info) => {
-          const track = song.macros[info.key]
-          const driven = !!track?.enabled && track.envelope.points.length > 0
-          return (
-            <div className={`dial-slot ${driven ? 'driven' : ''}`} key={info.key}>
-              <Dial
-                label={info.label}
-                low={info.low}
-                high={info.high}
-                value={driven ? heard[info.key] : macros[info.key]}
-                // A dial the song drives wears its lane's colour, so the two
-                // read as one control in two places.
-                accent={driven ? MACRO_COLOURS[info.key] : accent}
-                onChange={(v) => setMacro(info.key, v)}
-              />
-              {driven && (
-                <Tooltip content="The song is driving this dial. Turning it writes into the song at the playhead; click to take it back.">
-                  <button
-                    type="button"
-                    className="dial-unlink"
-                    onClick={() => unlinkMacro(info.key)}
-                  >
-                    <span className="tl-swatch" style={{ borderColor: MACRO_COLOURS[info.key], background: MACRO_COLOURS[info.key] }} />
-                    on timeline ×
-                  </button>
-                </Tooltip>
-              )}
-            </div>
-          )
-        })}
-      </section>
+      <Dials
+        song={song}
+        macros={macros}
+        heard={heard}
+        accent={accent}
+        onChange={setMacro}
+        onUnlink={unlinkMacro}
+      />
 
       <Timeline
         song={song}
@@ -742,74 +335,20 @@ export function App() {
 
         <SeedField value={seedName} onCommit={applySeed} onShuffle={reseed} />
 
-        <div className="capture">
-          <div className="lengths" role="group" aria-label="Capture length">
-            <Tooltip content={`The song once through, ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')} plus its tail`}>
-              <button
-                type="button"
-                className={captureLength === 'song' ? 'on' : ''}
-                onClick={() => setCaptureLength('song')}
-              >
-                song
-              </button>
-            </Tooltip>
-            {CAPTURE_LENGTHS.map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={captureLength === m ? 'on' : ''}
-                onClick={() => { setCaptureLength(m); setMinutesDraft('') }}
-              >
-                {m}m
-              </button>
-            ))}
-            <Tooltip content={`Any length up to ${MAX_CAPTURE_MINUTES} minutes`}>
-              <label
-                className={`length-custom ${typeof captureLength === 'number' && !CAPTURE_LENGTHS.includes(captureLength) ? 'on' : ''}`}
-              >
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="…"
-                  aria-label="Capture length in minutes"
-                  value={minutesDraft}
-                  onChange={(e) => {
-                    setMinutesDraft(e.target.value)
-                    const m = parseMinutes(e.target.value)
-                    if (m !== null) setCaptureLength(m)
-                  }}
-                  onBlur={() => {
-                    // Show what will actually be captured, once clamped and rounded.
-                    const m = parseMinutes(minutesDraft)
-                    setMinutesDraft(m === null || CAPTURE_LENGTHS.includes(m) ? '' : String(m))
-                    if (m !== null) setCaptureLength(m)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') e.currentTarget.blur()
-                  }}
-                />
-                m
-              </label>
-            </Tooltip>
-          </div>
-          <button
-            className="capture-go"
-            onClick={() => void capture()}
-            disabled={captureProgress !== null}
-            type="button"
-          >
-            {captureProgress === null
-              ? 'capture'
-              : `${Math.round(captureProgress * 100)}%`}
-          </button>
-        </div>
+        <CaptureControls
+          length={captureLength}
+          onLengthChange={setCaptureLength}
+          songSeconds={seconds}
+          progress={captureProgress}
+          onCapture={() => void capture()}
+        />
       </footer>
       {/* Floats over the page rather than taking a row in it, so a
           confirmation never shifts the controls under the pointer. */}
       {notice && (
         <div className="toast" role="status">
           {notice.text}
-          {notice.undo && <button type="button" className="toast-action" onClick={undo}>undo</button>}
+          {notice.undo && <button type="button" className="toast-action" onClick={undoGenerate}>undo</button>}
         </div>
       )}
     </main>

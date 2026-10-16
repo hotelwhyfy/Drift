@@ -1,9 +1,7 @@
 /**
  * Accent colour from the Colour macro.
  *
- * Deliberately a copy of the private helper in the prototype's App rather than
- * a refactor of it: the prototype is frozen, and one duplicated colour function
- * is a much smaller cost than reaching into a working app to extract it.
+ * Shared by the prototype and the mood version.
  */
 export function accentFor(colour: number): string {
   // Around the warm side of the wheel — indigo, violet, rose, amber. The direct
