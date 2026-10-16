@@ -1,22 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-
-export interface SelectOption<T extends string> {
-  value: T
-  label: string
-  /** A dot in this colour before the label — automation acting on it, say. */
-  mark?: string
-  /** Read after the label by assistive technology, for what the mark means. */
-  note?: string
-}
-
-export interface SelectGroup<T extends string> {
-  group: string
-  options: readonly SelectOption<T>[]
-}
-
-export type SelectItem<T extends string> = SelectOption<T> | SelectGroup<T>
+import type { SelectOption, SelectGroup, SelectItem } from '@/ui/types.ts'
 
 interface Props<T extends string> {
   /** The chosen option, or null for an action menu that has none. */

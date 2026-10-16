@@ -8,7 +8,6 @@ import type { SlotDesc } from '@/engine/types.ts'
 import type { Lane } from '@/automation/lane.ts'
 import { instrumentById } from '@/instruments/registry.ts'
 import { controlsOf } from '@/instruments/controlsOf.ts'
-import { EXPRESSION_INFO } from '@/fuzzy/expression.ts'
 import { barScale } from '@/ui/barScale.ts'
 import type { BarScale } from '@/ui/barScale.ts'
 import { gridStep } from '@/ui/gridStep.ts'
@@ -18,7 +17,9 @@ import { laneColour } from '@/ui/laneColour.ts'
 import { Tooltip } from '@/ui/Tooltip.tsx'
 import { released } from '@/ui/released.ts'
 import { Select } from '@/ui/Select.tsx'
-import type { SelectGroup } from '@/ui/Select.tsx'
+import { formatDuration } from '@/ui/formatDuration.ts'
+import { targetLabel } from '@/ui/targetLabel.ts'
+import type { SelectGroup } from '@/ui/types.ts'
 
 interface Props {
   song: Song
@@ -41,20 +42,6 @@ const RULER_HEIGHT = 24
 const MIN_PX = 1
 const MAX_PX = 96
 const ENDS: SongEnd[] = ['loop', 'hold', 'stop']
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function targetLabel(slot: SlotDesc, lane: Lane): string {
-  const def = instrumentById(slot.defId)
-  const t = lane.target
-  if (t.kind === 'level') return 'level'
-  if (t.kind === 'expression') return EXPRESSION_INFO.find((i) => i.key === t.key)?.label.toLowerCase() ?? t.key
-  return (def && controlsOf(def).find((c) => c.param === t.param)?.label.toLowerCase()) ?? t.param
-}
 
 /**
  * The song, laid out left to right.

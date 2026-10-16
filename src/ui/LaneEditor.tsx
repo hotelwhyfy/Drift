@@ -7,7 +7,7 @@ import type { InstrumentDef } from '@/instruments/types.ts'
 import { controlsOf } from '@/instruments/controlsOf.ts'
 import { released } from '@/ui/released.ts'
 import { Select } from '@/ui/Select.tsx'
-import type { SelectOption } from '@/ui/Select.tsx'
+import type { SelectOption } from '@/ui/types.ts'
 
 /** Follow lanes can't be made here, only kept: one is listed only while the lane is one. */
 const sourceOptions = (following: boolean): SelectOption<LaneSource['kind']>[] => {

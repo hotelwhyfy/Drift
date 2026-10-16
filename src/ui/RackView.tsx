@@ -8,8 +8,9 @@ import { KnobPanel } from '@/ui/KnobPanel.tsx'
 import { makeLane } from '@/automation/lane.ts'
 import type { Lane } from '@/automation/lane.ts'
 import type { Expression, ExpressionKey } from '@/fuzzy/expression.ts'
-import { FuzzyEngine } from '@/fuzzy/inference.ts'
-import { EXPRESSION_INFO } from '@/fuzzy/expression.ts'
+import { meterPosition } from '@/ui/meterPosition.ts'
+import { explainerFor } from '@/ui/explainerFor.ts'
+import { EXPRESSION_INFO, blendExpression } from '@/fuzzy/expression.ts'
 import { Tooltip } from '@/ui/Tooltip.tsx'
 import { songLaneFor } from '@/automation/songLaneFor.ts'
 import { drivenValue } from '@/automation/drivenValue.ts'
@@ -32,28 +33,6 @@ interface Props {
 }
 
 let laneCounter = 0
-
-/** The meter's floor. Quieter than this, an instrument reads as silent. */
-const METER_FLOOR_DB = -60
-
-/** Linear amplitude → 0..1 along the meter, on a decibel scale. */
-function meterPosition(amplitude: number): number {
-  if (amplitude <= 0) return 0
-  const db = 20 * Math.log10(amplitude)
-  return Math.max(0, Math.min(1, 1 - db / METER_FLOOR_DB))
-}
-
-/** Cached per instrument definition, purely to render the firing rules. */
-const explainers = new Map<string, FuzzyEngine>()
-function explainerFor(defId: string): FuzzyEngine | null {
-  const cached = explainers.get(defId)
-  if (cached) return cached
-  const def = instrumentById(defId)
-  if (!def) return null
-  const engine = new FuzzyEngine(def.rules)
-  explainers.set(defId, engine)
-  return engine
-}
 
 export function RackView({ slots, global, accent, bars, readouts, metering, playhead, onChange }: Props) {
   const [open, setOpen] = useState<string | null>(null)
@@ -98,11 +77,7 @@ export function RackView({ slots, global, accent, bars, readouts, metering, play
         const isOpen = open === slot.id
         // What the instrument is actually seeing, after following the master
         // dials — the same blend the engine performs.
-        const effective: Expression = { ...slot.expression }
-        EXPRESSION_INFO.forEach((info) => {
-          effective[info.key] = slot.expression[info.key] +
-            (global[info.key] - slot.expression[info.key]) * slot.follow
-        })
+        const effective = blendExpression(slot.expression, global, slot.follow)
         const [xKey, yKey] = axes[slot.id] ?? ['brightness', 'weight']
         const firing = explainerFor(slot.defId)?.explain(effective, 3) ?? []
         const readout = readouts?.find((r) => r.id === slot.id)

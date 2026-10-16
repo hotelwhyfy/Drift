@@ -2,7 +2,7 @@ import type { InstrumentDef, InstrumentVoice } from '@/instruments/types.ts'
 import { instrumentById } from '@/instruments/registry.ts'
 import { FuzzyEngine } from '@/fuzzy/inference.ts'
 import type { Expression } from '@/fuzzy/expression.ts'
-import { EXPRESSION_KEYS, NEUTRAL, clampExpression } from '@/fuzzy/expression.ts'
+import { NEUTRAL, blendExpression, clampExpression } from '@/fuzzy/expression.ts'
 import { LaneEvaluator } from '@/automation/lane.ts'
 import type { LaneContext } from '@/automation/lane.ts'
 import { Resolver } from '@/harmony/resolver.ts'
@@ -267,10 +267,7 @@ export class Rack {
     // The instrument's own expression, pulled towards the global one by
     // however much it is set to follow. This is how six master dials steer a
     // rack of instruments that each also have their own character.
-    const base: Expression = { ...NEUTRAL }
-    EXPRESSION_KEYS.forEach((k) => {
-      base[k] = slot.expression[k] + (global[k] - slot.expression[k]) * slot.follow
-    })
+    const base = blendExpression(slot.expression, global, slot.follow)
     // Automation lands on top, so a drawn curve overrides both.
     slot.lanes.forEach((lane) => {
       if (!lane.enabled || lane.target.kind !== 'expression') return

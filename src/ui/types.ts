@@ -10,3 +10,19 @@ export interface Session {
   song: Song
   projectName: string
 }
+
+export interface SelectOption<T extends string> {
+  value: T
+  label: string
+  /** A dot in this colour before the label — automation acting on it, say. */
+  mark?: string
+  /** Read after the label by assistive technology, for what the mark means. */
+  note?: string
+}
+
+export interface SelectGroup<T extends string> {
+  group: string
+  options: readonly SelectOption<T>[]
+}
+
+export type SelectItem<T extends string> = SelectOption<T> | SelectGroup<T>

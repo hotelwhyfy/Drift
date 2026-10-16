@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Tooltip } from '@/ui/Tooltip.tsx'
 import { MAX_CAPTURE_MINUTES, parseMinutes } from '@/ui/parseMinutes.ts'
+import { formatDuration } from '@/ui/formatDuration.ts'
 import type { CaptureLength } from '@/ui/hooks/useCapture.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]
@@ -19,13 +20,11 @@ interface Props {
 export function CaptureControls({ length, onLengthChange, songSeconds, progress, onCapture }: Props) {
   /** What is in the minutes field while it is being typed in. */
   const [minutesDraft, setMinutesDraft] = useState('')
-  const minutes = Math.floor(songSeconds / 60)
-  const rest = String(Math.floor(songSeconds % 60)).padStart(2, '0')
 
   return (
     <div className="capture">
       <div className="lengths" role="group" aria-label="Capture length">
-        <Tooltip content={`The song once through, ${minutes}:${rest} plus its tail`}>
+        <Tooltip content={`The song once through, ${formatDuration(songSeconds)} plus its tail`}>
           <button
             type="button"
             className={length === 'song' ? 'on' : ''}
