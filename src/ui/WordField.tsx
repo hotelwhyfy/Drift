@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { positionPhrase, SUGGESTIONS } from '@/fuzzy/lexicon.ts'
+import { positionPhrase } from '@/fuzzy/positionPhrase.ts'
+import { SUGGESTIONS } from '@/fuzzy/lexiconData.ts'
 import type { Expression } from '@/fuzzy/expression.ts'
 
 interface Props {

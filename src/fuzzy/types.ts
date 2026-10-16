@@ -1,3 +1,4 @@
+import type { Expression } from '@/fuzzy/expression.ts'
 import type { MembershipFn } from '@/fuzzy/membership.ts'
 import type { ExpressionKey } from '@/fuzzy/expression.ts'
 
@@ -26,4 +27,17 @@ export interface RuleBase {
   readonly inputs?: Partial<Record<ExpressionKey, Record<string, MembershipFn>>>
   readonly outputs: Readonly<Record<string, OutputSpec>>
   readonly rules: readonly Rule[]
+}
+
+export interface WordMatch {
+  readonly word: string
+  /** 0..1. Low confidence means the position came mostly from the hash. */
+  readonly confidence: number
+  readonly nearest: string | null
+  readonly vector: Expression
+}
+
+export interface PhraseResult {
+  readonly expression: Expression
+  readonly matches: readonly WordMatch[]
 }

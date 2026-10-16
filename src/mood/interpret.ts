@@ -1,6 +1,6 @@
 import type { Expression } from '@/fuzzy/expression.ts'
 import { EXPRESSION_KEYS, NEUTRAL } from '@/fuzzy/expression.ts'
-import { positionWord } from '@/fuzzy/lexicon.ts'
+import { positionWord } from '@/fuzzy/positionWord.ts'
 import {
   MOOD_WORDS, MOOD_PHRASES, MAX_PHRASE_WORDS,
   INTENSIFIERS, DIMINISHERS, NEGATIONS, CONTRAST,
