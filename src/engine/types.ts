@@ -1,3 +1,7 @@
+import type { Reverb } from '@/dsp/reverb.ts'
+import type { WowFlutter, Saturator, Limiter } from '@/dsp/tape.ts'
+import type { Chorus, PingPong, Ducker } from '@/dsp/modfx.ts'
+import type { Svf } from '@/dsp/svf.ts'
 import type { Expression } from '@/fuzzy/expression.ts'
 import type { Lane } from '@/automation/lane.ts'
 import type { DrumHit } from '@/core/types.ts'
@@ -84,4 +88,19 @@ export interface EngineSnapshot {
   rootMidi: number
   /** A song set to stop has reached its end; only tails remain. */
   ended: boolean
+}
+
+/** Everything after the rack: one shared room, the tape, the limiter. */
+export interface MasterChain {
+  readonly reverb: Reverb
+  readonly echo: PingPong
+  readonly chorus: Chorus
+  readonly wow: WowFlutter
+  readonly sat: Saturator
+  readonly limiter: Limiter
+  readonly ducker: Ducker
+  readonly tiltL: Svf
+  readonly tiltR: Svf
+  readonly lowCutL: Svf
+  readonly lowCutR: Svf
 }

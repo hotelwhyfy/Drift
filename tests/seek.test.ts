@@ -81,7 +81,9 @@ describe('seeking', () => {
     const b = barsOfEvents(seeked, 4)
     expect(b).toEqual(a)
     expect(a.flat().length).toBeGreaterThan(0)
-  })
+    // Renders eleven bars of audio on a busy rack: about 3 s alone, which the
+    // default 5 s budget does not survive when the whole suite shares the CPU.
+  }, 30_000)
 
   it('renders the same audio every time it seeks to the same place', () => {
     const render = (): Float32Array => {

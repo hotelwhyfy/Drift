@@ -1,13 +1,10 @@
-import { createRng, deriveSeed } from '@/core/rng.ts'
 import { clamp01 } from '@/core/curves.ts'
 import type { Stereo } from '@/core/types.ts'
-import { Reverb } from '@/dsp/reverb.ts'
-import { WowFlutter, Saturator, Limiter } from '@/dsp/tape.ts'
-import { Chorus, PingPong, Ducker } from '@/dsp/modfx.ts'
-import { Svf } from '@/dsp/svf.ts'
 import { Harmony } from '@/compose/harmony.ts'
 import { Rack } from '@/engine/rack.ts'
-import type { SlotState, ScheduledEvent, EngineSnapshot } from '@/engine/types.ts'
+import { buildMasterChain } from '@/engine/buildMasterChain.ts'
+import { DEFAULT_RACK } from '@/engine/defaultRack.ts'
+import type { SlotState, ScheduledEvent, EngineSnapshot, MasterChain } from '@/engine/types.ts'
 import { buildPatch } from '@/macros/patch.ts'
 import type { Patch, ComposeSettings } from '@/macros/types.ts'
 import type { Macros } from '@/macros/macros.ts'
@@ -18,35 +15,10 @@ import type { Song } from '@/song/types.ts'
 import { macrosAt } from '@/song/macrosAt.ts'
 import { sectionAt } from '@/song/sectionAt.ts'
 import { composeAt } from '@/song/composeAt.ts'
-
 import type { HarmonicContext } from '@/harmony/types.ts'
 
 /** Samples between control-rate updates, on a grid that restarts every bar. */
 const CONTROL_BLOCK = 64
-
-/**
- * What the rack starts with — the ensemble the six dials, and the loudness
- * fit in `levelTrim`, were tuned against. Harmony and room first: the melodic
- * and percussive instruments are a click away, not a default.
- */
-export const DEFAULT_RACK = ['pad', 'strings', 'shimmer', 'sub', 'bed', 'dust'] as const
-
-/** Everything after the rack: one shared room, the tape, the limiter. */
-interface MasterChain {
-  readonly reverb: Reverb
-  readonly echo: PingPong
-  readonly chorus: Chorus
-  readonly wow: WowFlutter
-  readonly sat: Saturator
-  readonly limiter: Limiter
-  readonly ducker: Ducker
-  readonly tiltL: Svf
-  readonly tiltR: Svf
-  readonly lowCutL: Svf
-  readonly lowCutR: Svf
-}
-
-export { barLengthSamples }
 
 /**
  * The whole instrument.
@@ -108,34 +80,12 @@ export class Engine {
 
     this.rack = new Rack(sampleRate, seed)
     this.harmony = new Harmony(seed)
-    this.dsp = this.buildDsp()
+    this.dsp = buildMasterChain(this.sampleRate, this.seed)
 
     for (const id of DEFAULT_RACK) this.rack.add(id)
     this.applyPatch()
     this.barLength = barLengthSamples(this.patch.compose.tempo, sampleRate)
     this.loadBar(0)
-  }
-
-  /** The master chain, fresh. Seeded, so a rebuilt chain is the same chain. */
-  private buildDsp(): MasterChain {
-    const sr = this.sampleRate
-    const rng = createRng(deriveSeed(this.seed, 'engine'))
-    // Constructed in this order because the reverb, chorus and wow share one
-    // stream: reordering them would change every render.
-    const reverb = new Reverb(sr, rng)
-    const echo = new PingPong(sr)
-    const chorus = new Chorus(sr, rng)
-    const wow = new WowFlutter(sr, rng)
-    return {
-      reverb, echo, chorus, wow,
-      sat: new Saturator(),
-      limiter: new Limiter(sr),
-      ducker: new Ducker(sr),
-      tiltL: new Svf(sr),
-      tiltR: new Svf(sr),
-      lowCutL: new Svf(sr),
-      lowCutR: new Svf(sr),
-    }
   }
 
   /**
@@ -152,7 +102,7 @@ export class Engine {
   seek(bar: number, opts: { preroll?: number } = {}): void {
     const to = Math.max(0, Math.floor(bar))
     const from = Math.max(0, to - Math.max(0, Math.floor(opts.preroll ?? 0)))
-    this.dsp = this.buildDsp()
+    this.dsp = buildMasterChain(this.sampleRate, this.seed)
     this.rack.resetVoices()
     this.harmony.invalidate()
     this.ended = false

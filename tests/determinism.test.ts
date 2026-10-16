@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Engine } from '@/engine/engine.ts'
 import { Rack } from '@/engine/rack.ts'
-import { DEFAULT_RACK } from '@/engine/engine.ts'
+import { DEFAULT_RACK } from '@/engine/defaultRack.ts'
 import type { HarmonicContext } from '@/harmony/types.ts'
 import { MODES } from '@/core/theory.ts'
 import { SCENES, DEFAULT_MACROS } from '@/macros/macros.ts'

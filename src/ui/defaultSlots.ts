@@ -1,5 +1,5 @@
 import type { SlotDesc } from '@/engine/types.ts'
-import { DEFAULT_RACK } from '@/engine/engine.ts'
+import { DEFAULT_RACK } from '@/engine/defaultRack.ts'
 import { instrumentById } from '@/instruments/registry.ts'
 import { NEUTRAL } from '@/fuzzy/expression.ts'
 
