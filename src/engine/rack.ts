@@ -137,12 +137,11 @@ export class Rack {
     this.slots = this.slots.filter((s) => wanted.has(s.id))
     const byId = new Map(this.slots.map((s) => [s.id, s] as const))
 
-    const next: Slot[] = []
-    for (const d of desc) {
+    this.slots = desc.flatMap((d): Slot[] => {
       let slot = byId.get(d.id)
       if (!slot) {
         const def = instrumentById(d.defId)
-        if (!def) continue
+        if (!def) return []
         slot = {
           id: d.id,
           defId: d.defId,
@@ -176,9 +175,8 @@ export class Rack {
         slot.lanes = d.lanes
         slot.knobs = d.knobs
       }
-      next.push(slot)
-    }
-    this.slots = next
+      return [slot]
+    })
   }
 
   /** The current rack as a description, for seeding the interface. */
@@ -193,11 +191,10 @@ export class Rack {
   /** Each slot's live state, normalised, for knobs to show as a ghost. */
   readout(): SlotReadout[] {
     return this.slots.map((s) => {
-      const params: Record<string, number> = {}
-      for (const [name, value] of Object.entries(s.params)) {
+      const params = Object.fromEntries(Object.entries(s.params).flatMap(([name, value]): [string, number][] => {
         const spec = paramSpecOf(s.def, name)
-        if (spec) params[name] = Math.round(normaliseParam(spec, value) * 1000) / 1000
-      }
+        return spec ? [[name, Math.round(normaliseParam(spec, value) * 1000) / 1000]] : []
+      }))
       const rms = s.meterCount > 0 ? Math.sqrt(s.meterSq / s.meterCount) : 0
       const peak = s.meterPeak
       s.meterPeak = 0
@@ -213,14 +210,14 @@ export class Rack {
    */
   control(global: Expression, ctx: LaneContext): void {
     const anySolo = this.slots.some((s) => s.soloed)
-    for (const slot of this.slots) {
+    this.slots.forEach((slot) => {
       const { resolved, params, level } = this.evaluate(slot, global, ctx)
       slot.resolved = resolved
       slot.params = params
       slot.liveLevel = level
       const audible = slot.muted || (anySolo && !slot.soloed) ? 0 : level
       slot.def.apply(slot.voice, slot.params, audible)
-    }
+    })
   }
 
   /**
@@ -235,11 +232,11 @@ export class Rack {
    */
   prepareBar(global: Expression, bar: number): void {
     const ctx: LaneContext = { bars: bar, kick: 0, level: 0 }
-    for (const slot of this.slots) {
+    this.slots.forEach((slot) => {
       const { resolved, params } = this.evaluate(slot, global, ctx)
       slot.barResolved = resolved
       slot.barParams = params
-    }
+    })
   }
 
   /**
@@ -247,18 +244,18 @@ export class Rack {
    * to wherever playback was, not to where it is going.
    */
   resetVoices(): void {
-    for (const slot of this.slots) {
+    this.slots.forEach((slot) => {
       slot.voice = slot.def.create(this.sampleRate, createRng(deriveSeed(this.seed, slot.id)))
-    }
+    })
   }
 
   /** Forget what the meters have gathered, so a seek's pre-roll is never shown. */
   resetMeters(): void {
-    for (const slot of this.slots) {
+    this.slots.forEach((slot) => {
       slot.meterPeak = 0
       slot.meterSq = 0
       slot.meterCount = 0
-    }
+    })
   }
 
   /** Pure: a slot's expression, parameters and level at one instant. */
@@ -271,46 +268,44 @@ export class Rack {
     // however much it is set to follow. This is how six master dials steer a
     // rack of instruments that each also have their own character.
     const base: Expression = { ...NEUTRAL }
-    for (const k of EXPRESSION_KEYS) {
+    EXPRESSION_KEYS.forEach((k) => {
       base[k] = slot.expression[k] + (global[k] - slot.expression[k]) * slot.follow
-    }
+    })
     // Automation lands on top, so a drawn curve overrides both.
-    for (const lane of slot.lanes) {
-      if (!lane.enabled || lane.target.kind !== 'expression') continue
+    slot.lanes.forEach((lane) => {
+      if (!lane.enabled || lane.target.kind !== 'expression') return
       const v = this.lanes.value(lane, ctx)
       const key = lane.target.key
       base[key] = this.lanes.apply(base[key], v, lane)
-    }
+    })
     const resolved = clampExpression(base)
     const params = { ...slot.fuzzy.evaluate(resolved) }
     const fixed = slot.def.fixed
     if (fixed) {
-      for (const name in fixed) params[name] = denormaliseParam(fixed[name], fixed[name].default)
+      Object.keys(fixed).forEach((name) => { params[name] = denormaliseParam(fixed[name], fixed[name].default) })
     }
 
     // Knobs override what the rules inferred, for when someone wants to set
     // one thing and not the twelve it is normally tied to.
-    for (const name in slot.knobs) {
+    Object.keys(slot.knobs).forEach((name) => {
       const spec = paramSpecOf(slot.def, name)
       if (spec) params[name] = denormaliseParam(spec, slot.knobs[name])
-    }
+    })
 
     // Parameter lanes move a parameter relative to wherever the rules or the
     // knob left it.
-    for (const lane of slot.lanes) {
-      if (!lane.enabled || lane.target.kind !== 'param') continue
+    slot.lanes.forEach((lane) => {
+      if (!lane.enabled || lane.target.kind !== 'param') return
       const name = lane.target.param
       const spec = paramSpecOf(slot.def, name)
-      if (!spec || params[name] === undefined) continue
+      if (!spec || params[name] === undefined) return
       const v = this.lanes.value(lane, ctx)
       params[name] = denormaliseParam(spec, this.lanes.apply(normaliseParam(spec, params[name]), v, lane))
-    }
+    })
 
-    let level = slot.level
-    for (const lane of slot.lanes) {
-      if (!lane.enabled || lane.target.kind !== 'level') continue
-      level = clamp01(this.lanes.apply(level, this.lanes.value(lane, ctx), lane))
-    }
+    const level = slot.lanes
+      .filter((lane) => lane.enabled && lane.target.kind === 'level')
+      .reduce((current, lane) => clamp01(this.lanes.apply(current, this.lanes.value(lane, ctx), lane)), slot.level)
     return { resolved, params, level }
   }
 
@@ -333,8 +328,8 @@ export class Rack {
 
     const ordered = [...this.slots].sort((a, b) => ROLE_ORDER[a.def.role] - ROLE_ORDER[b.def.role])
 
-    for (const slot of ordered) {
-      if (slot.def.continuous) continue
+    ordered.forEach((slot) => {
+      if (slot.def.continuous) return
       const rng = rngAt(this.seed, slot.id, bar)
       const jitter = (scale: number): number => centred(rng, humanise * 0.02 * scale) * this.sampleRate
       const at = (step: number, scale = 1): number =>
@@ -348,9 +343,9 @@ export class Rack {
       if (slot.def.notes) {
         const base = Resolver.registerFor(slot.def.role, harmonic.rootMidi)
         const register = slot.def.register ? slot.def.register(slot.barParams, base) : base
-        for (const intent of slot.def.notes(patternCtx)) {
+        slot.def.notes(patternCtx).forEach((intent) => {
           const midi = this.resolver.resolve(intent, harmonic, register, slot.id)
-          if (midi === null) continue
+          if (midi === null) return
           events.push({
             offset: at(intent.step),
             slotId: slot.id,
@@ -358,11 +353,11 @@ export class Rack {
             velocity: intent.weight,
             durationSec: (intent.lengthSteps / 16) * barSec,
           })
-        }
+        })
       }
 
       if (slot.def.hits) {
-        for (const hit of slot.def.hits(patternCtx)) {
+        slot.def.hits(patternCtx).forEach((hit) => {
           events.push({
             offset: at(hit.step, 0.6),
             slotId: slot.id,
@@ -370,15 +365,15 @@ export class Rack {
             velocity: hit.velocity,
             durationSec: ((hit.lengthSteps ?? 0) / 16) * barSec,
           })
-        }
+        })
       }
-    }
+    })
 
     return events.sort((a, b) => a.offset - b.offset)
   }
 
   retune(referenceHz: number): void {
-    for (let i = 0; i < this.slots.length; i++) this.slots[i].voice.retune?.(referenceHz)
+    this.slots.forEach((slot) => slot.voice.retune?.(referenceHz))
   }
 
   fire(event: ScheduledEvent, referenceHz: number): number {

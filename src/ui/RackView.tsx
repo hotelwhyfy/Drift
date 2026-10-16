@@ -99,10 +99,10 @@ export function RackView({ slots, global, accent, bars, readouts, metering, play
         // What the instrument is actually seeing, after following the master
         // dials — the same blend the engine performs.
         const effective: Expression = { ...slot.expression }
-        for (const info of EXPRESSION_INFO) {
+        EXPRESSION_INFO.forEach((info) => {
           effective[info.key] = slot.expression[info.key] +
             (global[info.key] - slot.expression[info.key]) * slot.follow
-        }
+        })
         const [xKey, yKey] = axes[slot.id] ?? ['brightness', 'weight']
         const firing = explainerFor(slot.defId)?.explain(effective, 3) ?? []
         const readout = readouts?.find((r) => r.id === slot.id)
@@ -118,11 +118,12 @@ export function RackView({ slots, global, accent, bars, readouts, metering, play
         // the fader in its automation's colour, and leaves the meter alone.
         const levelStyle: (CSSProperties & { '--accent': string }) | undefined =
           levelAutomated ? { '--accent': levelAutomated } : undefined
-        const axisAutomation: Partial<Record<ExpressionKey, string>> = {}
-        for (const info of EXPRESSION_INFO) {
-          const c = automationColour(slot.lanes, (t) => t.kind === 'expression' && t.key === info.key, accent)
-          if (c) axisAutomation[info.key] = c
-        }
+        const axisAutomation: Partial<Record<ExpressionKey, string>> = Object.fromEntries(
+          EXPRESSION_INFO.flatMap((info): [ExpressionKey, string][] => {
+            const c = automationColour(slot.lanes, (t) => t.kind === 'expression' && t.key === info.key, accent)
+            return c ? [[info.key, c]] : []
+          }),
+        )
         const levelTip = levelLane
           ? `following its timeline lane${liveLevel === undefined ? '' : ` · now ${Math.round(liveLevel * 100)}%`}`
           : liveLevel === undefined

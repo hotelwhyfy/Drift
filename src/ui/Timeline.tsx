@@ -206,15 +206,15 @@ export function Timeline({
 
     const heads: { bar: number; colour: string }[] = [{ bar: playhead, colour: accent }]
     if (scrub !== null) heads.push({ bar: scrub, colour: '#ffffff80' })
-    for (const head of heads) {
+    heads.forEach((head) => {
       const px = scale.toX(head.bar)
-      if (px < 0 || px > width) continue
+      if (px < 0 || px > width) return
       ctx.strokeStyle = head.colour
       ctx.beginPath()
       ctx.moveTo(Math.round(px) + 0.5, 0)
       ctx.lineTo(Math.round(px) + 0.5, RULER_HEIGHT)
       ctx.stroke()
-    }
+    })
   }, [scale, width, pxPerBar, startBar, song.lengthBars, playhead, scrub, accent])
 
   const setTrack = (key: MacroKey, track: MacroTrack | undefined): void => {

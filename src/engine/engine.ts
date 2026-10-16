@@ -82,7 +82,7 @@ export class Engine {
     this.harmony = new Harmony(seed)
     this.dsp = buildMasterChain(this.sampleRate, this.seed)
 
-    for (const id of DEFAULT_RACK) this.rack.add(id)
+    DEFAULT_RACK.forEach((id) => this.rack.add(id))
     this.applyPatch()
     this.barLength = barLengthSamples(this.patch.compose.tempo, sampleRate)
     this.loadBar(0)
@@ -201,8 +201,7 @@ export class Engine {
     const { macros, driven } = macrosAt(this.song, this.targetMacros, pos)
     const cur = this.currentMacros
     let moved = false
-    for (let i = 0; i < MACRO_KEYS.length; i++) {
-      const k = MACRO_KEYS[i]
+    MACRO_KEYS.forEach((k) => {
       let next = macros[k]
       if (!driven.includes(k)) {
         const d = next - cur[k]
@@ -212,7 +211,7 @@ export class Engine {
         cur[k] = next
         moved = true
       }
-    }
+    })
     if (moved) {
       this.patch = buildPatch(cur)
       this.applyPatch()

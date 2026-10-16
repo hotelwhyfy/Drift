@@ -53,13 +53,11 @@ function optionIndex(def: InstrumentDef, control: ControlSpec, norm: number): nu
  */
 export function KnobPanel({ def, knobs, live, accent, onChange, lanes, playhead, onLanesChange }: Props) {
   const controls = controlsOf(def)
-  const groups: { name: string; controls: ControlSpec[] }[] = []
-  for (const c of controls) {
-    const name = c.group ?? ''
-    const group = groups.find((g) => g.name === name)
-    if (group) group.controls.push(c)
-    else groups.push({ name, controls: [c] })
-  }
+  // Groups in order of first appearance.
+  const groups = [...new Set(controls.map((c) => c.group ?? ''))].map((name) => ({
+    name,
+    controls: controls.filter((c) => (c.group ?? '') === name),
+  }))
 
   const set = (param: string, value: number | null): void => {
     const next: Record<string, number> = { ...knobs }

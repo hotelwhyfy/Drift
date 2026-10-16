@@ -100,11 +100,9 @@ export function Select<T extends string>({ value, items, onChange, label, placeh
     const repeating = [...t.text].every((c) => c === t.text[0])
     const needle = repeating ? t.text[0] : t.text
     const start = repeating ? from + 1 : Math.max(0, from)
-    for (let k = 0; k < flat.length; k++) {
-      const i = (start + k) % flat.length
-      if (flat[i].label.toLowerCase().startsWith(needle)) return i
-    }
-    return -1
+    // One lap of the list from `start`, wrapping round.
+    const lap = Array.from({ length: flat.length }, (_, k) => (start + k) % flat.length)
+    return lap.find((i) => flat[i].label.toLowerCase().startsWith(needle)) ?? -1
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>): void => {
