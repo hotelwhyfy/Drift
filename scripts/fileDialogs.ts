@@ -9,7 +9,7 @@
  * directly — the same dialog in every browser.
  *
  * Dev only, macOS only. Anywhere else the endpoints answer 404 and the page
- * falls back to the browser's own dialogs (src/project/filePicker.ts).
+ * falls back to the browser's own dialogs (src/files/).
  *
  * The path always comes from the dialog the person answered, never from the
  * request, so a page can at most ask for a dialog — it cannot pick a file.

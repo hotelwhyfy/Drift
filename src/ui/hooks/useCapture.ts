@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import type { Player } from '@/audio/player.ts'
-import { openWavSink, isCancellation } from '@/project/filePicker.ts'
-import type { FileSink } from '@/project/filePicker.ts'
+import { openWavSink } from '@/files/openWavSink.ts'
+import { isCancellation } from '@/files/isCancellation.ts'
+import type { FileSink } from '@/files/types.ts'
 
 /** Minutes, or 'song' for the song once through. */
 export type CaptureLength = number | 'song'

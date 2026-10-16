@@ -1,7 +1,10 @@
 import { useCallback } from 'react'
 import type { Session } from '@/ui/types.ts'
 import { readProject, writeProject, projectFilename } from '@/project/project.ts'
-import { saveTextFile, openTextFile, isCancellation, stripExtension } from '@/project/filePicker.ts'
+import { saveTextFile } from '@/files/saveTextFile.ts'
+import { openTextFile } from '@/files/openTextFile.ts'
+import { isCancellation } from '@/files/isCancellation.ts'
+import { stripExtension } from '@/files/stripExtension.ts'
 
 interface ProjectFiles {
   saveProject: () => Promise<void>
