@@ -60,17 +60,13 @@ export const drone: InstrumentDef = {
     // stays: the voice holds a note it is asked for again rather than
     // restriking it.
     const voices = Math.round(ctx.params.voices ?? 2)
-    const out: NoteIntent[] = []
-    for (let i = 0; i < voices; i++) {
-      out.push({
-        role: 'chordal',
-        contour: -0.9 + i * 0.7,
-        weight: lerp(0.65, 0.8, ctx.rng()),
-        step: 0,
-        lengthSteps: 16 * 1.05,
-      })
-    }
-    return out
+    return Array.from({ length: voices }, (_, i): NoteIntent => ({
+      role: 'chordal',
+      contour: -0.9 + i * 0.7,
+      weight: lerp(0.65, 0.8, ctx.rng()),
+      step: 0,
+      lengthSteps: 16 * 1.05,
+    }))
   },
   controls: [
     { param: 'brightness', label: 'Bright', group: 'sound' },

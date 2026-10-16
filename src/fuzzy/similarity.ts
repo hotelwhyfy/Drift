@@ -1,5 +1,4 @@
 export function similarity(a: Set<string>, b: Set<string>): number {
-  let shared = 0
-  for (const t of a) if (b.has(t)) shared++
+  const shared = [...a].filter((t) => b.has(t)).length
   return shared / Math.max(1, Math.min(a.size, b.size))
 }

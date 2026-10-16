@@ -6,6 +6,8 @@ import { clamp01, lerp } from '@/core/curves.ts'
 
 /** Snare ghosts only where they cannot smudge the backbeat. */
 const GHOST_STEPS = [1, 3, 6, 7, 9, 10, 14, 15]
+/** The sixteenths of a bar, in order. */
+const STEPS = Array.from({ length: 16 }, (_, step) => step)
 const PHRASE_BARS = 4
 
 /**
@@ -53,13 +55,13 @@ export function drumPattern(ctx: PatternContext): PercussionEvent[] {
     { kind: 'openHat', table: style.openHat, lo: 0.4, hi: 0.6, weight: openHats * 2 },
   ]
   pieces.forEach((piece, index) => {
-    for (let step = 0; step < 16; step++) {
+    STEPS.forEach((step) => {
       const prob = piece.table[step] * piece.weight
-      if (prob <= 0) continue
+      if (prob <= 0) return
       if (roll(index, step) < scaled(prob)) {
         out.push({ step, kind: piece.kind, velocity: velocity(step, piece.lo, piece.hi) })
       }
-    }
+    })
   })
 
   // Asked for open hats outright: at least one a bar, on the last off-beat.
@@ -67,11 +69,11 @@ export function drumPattern(ctx: PatternContext): PercussionEvent[] {
     out.push({ step: 14, kind: 'openHat', velocity: 0.5 })
   }
 
-  for (const step of GHOST_STEPS) {
+  GHOST_STEPS.forEach((step) => {
     if (ctx.rng() < ghost * 0.45) {
       out.push({ step, kind: 'snare', velocity: lerp(0.12, 0.3, ctx.rng()) })
     }
-  }
+  })
 
   const isFill = fill > 0 && ctx.bar % every === every - 1
   const played = isFill ? withFill(out, fill, ctx) : out
@@ -88,15 +90,15 @@ export function drumPattern(ctx: PatternContext): PercussionEvent[] {
 function withFill(events: PercussionEvent[], amount: number, ctx: PatternContext): PercussionEvent[] {
   const from = amount > 0.6 ? 8 : 12
   const kept = events.filter((e) => e.step < from || e.kind === 'kick')
-  for (let step = from; step < 16; step++) {
+  STEPS.slice(from).forEach((step) => {
     const t = (step - from) / (16 - from)
-    if (step % 2 === 1 && ctx.rng() > amount) continue
+    if (step % 2 === 1 && ctx.rng() > amount) return
     kept.push({
       step,
       kind: ctx.rng() < 0.25 ? 'rim' : 'snare',
       velocity: clamp01(lerp(0.35, 0.95, t) * lerp(0.7, 1, amount)),
     })
-  }
+  })
   if (amount > 0.3) kept.push({ step: 14, kind: 'kick', velocity: 0.8 })
   return kept
 }

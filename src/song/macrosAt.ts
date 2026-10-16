@@ -18,11 +18,11 @@ export function macrosAt(song: Song, dials: Macros, bar: number): SongMacros {
   const at = Math.min(bar, song.lengthBars)
   const macros: Macros = { ...dials }
   const driven: MacroKey[] = []
-  for (const key of MACRO_KEYS) {
+  MACRO_KEYS.forEach((key) => {
     const track = song.macros[key]
-    if (!track || !track.enabled || track.envelope.points.length === 0) continue
+    if (!track || !track.enabled || track.envelope.points.length === 0) return
     macros[key] = sampleEnvelope(track.envelope, at)
     driven.push(key)
-  }
+  })
   return { macros, driven }
 }

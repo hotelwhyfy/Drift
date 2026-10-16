@@ -7,12 +7,10 @@ import type { InstrumentDef } from '@/instruments/types.ts'
  * forever, doing nothing and impossible to see.
  */
 export function readKnobs(raw: unknown, def: InstrumentDef): Record<string, number> {
-  const out: Record<string, number> = {}
-  if (typeof raw !== 'object' || raw === null) return out
-  for (const [name, value] of Object.entries(raw)) {
-    if (!paramSpecOf(def, name)) continue
-    if (typeof value !== 'number' || !Number.isFinite(value)) continue
-    out[name] = Math.min(1, Math.max(0, value))
-  }
-  return out
+  if (typeof raw !== 'object' || raw === null) return {}
+  return Object.fromEntries(Object.entries(raw).flatMap(([name, value]): [string, number][] => {
+    if (!paramSpecOf(def, name)) return []
+    if (typeof value !== 'number' || !Number.isFinite(value)) return []
+    return [[name, Math.min(1, Math.max(0, value))]]
+  }))
 }

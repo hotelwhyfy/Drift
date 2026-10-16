@@ -58,18 +58,16 @@ export const glass: InstrumentDef = {
     // Bells are an event, not a part. A handful of chances per bar, weighted
     // to the spaces between the strong beats.
     const chance = clamp01(ctx.params.chance ?? 0.2)
-    const out: NoteIntent[] = []
-    for (const step of [2, 6, 7, 10, 14, 15]) {
-      if (ctx.rng() < chance * 0.5) {
-        out.push({
-          role: 'colour',
-          contour: -0.2 + ctx.rng() * 1.2,
-          weight: lerp(0.25, 0.6, ctx.rng()),
-          step,
-          lengthSteps: 8 + ctx.rng() * 12,
-        })
-      }
-    }
-    return out
+    // Each step rolls, then draws its note's fields, before the next step rolls.
+    return [2, 6, 7, 10, 14, 15].flatMap((step): NoteIntent[] => {
+      if (!(ctx.rng() < chance * 0.5)) return []
+      return [{
+        role: 'colour',
+        contour: -0.2 + ctx.rng() * 1.2,
+        weight: lerp(0.25, 0.6, ctx.rng()),
+        step,
+        lengthSteps: 8 + ctx.rng() * 12,
+      }]
+    })
   },
 }

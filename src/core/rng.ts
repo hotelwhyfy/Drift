@@ -45,8 +45,7 @@ export function pick<T>(rng: Rng, items: readonly T[]): T {
 
 /** Choose an index by weight. Weights need not sum to 1. */
 export function pickWeighted(rng: Rng, weights: readonly number[]): number {
-  let total = 0
-  for (let i = 0; i < weights.length; i++) total += Math.max(0, weights[i])
+  const total = weights.reduce((sum, w) => sum + Math.max(0, w), 0)
   if (total <= 0) return 0
   let r = rng() * total
   for (let i = 0; i < weights.length; i++) {

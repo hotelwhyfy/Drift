@@ -15,11 +15,8 @@ export type SongLane = Lane & { source: { kind: 'song'; envelope: Envelope } }
  * nothing stored to write into, so under those the control stays the base.
  */
 export function songLaneFor(lanes: readonly Lane[], matches: (target: LaneTarget) => boolean): SongLane | undefined {
-  for (let i = lanes.length - 1; i >= 0; i--) {
-    const lane = lanes[i]
-    if (lane.enabled && lane.depth > 0 && lane.source.kind === 'song' && matches(lane.target)) {
-      return { ...lane, source: lane.source }
-    }
-  }
-  return undefined
+  // The last matching lane wins.
+  const lane = [...lanes].reverse().find((l): l is SongLane =>
+    l.enabled && l.depth > 0 && l.source.kind === 'song' && matches(l.target))
+  return lane && { ...lane, source: lane.source }
 }

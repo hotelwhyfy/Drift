@@ -47,18 +47,16 @@ export const shimmer: InstrumentDef = {
   notes: (ctx) => {
     // Two or three long notes a bar: the cloud needs something to be made of,
     // not a rhythm.
-    const out: NoteIntent[] = []
-    for (const step of [0, 8]) {
-      if (step === 8 && ctx.rng() < 0.4) continue
-      out.push({
+    return [0, 8].flatMap((step): NoteIntent[] => {
+      if (step === 8 && ctx.rng() < 0.4) return []
+      return [{
         role: 'colour',
         contour: -0.6 + ctx.rng() * 1.2,
         weight: lerp(0.5, 0.85, ctx.rng()),
         step,
         lengthSteps: 20 + ctx.rng() * 12,
-      })
-    }
-    return out
+      }]
+    })
   },
   controls: [
     { param: 'grainSize', label: 'Grain', group: 'cloud' },

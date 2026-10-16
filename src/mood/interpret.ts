@@ -83,15 +83,14 @@ function lookUp(word: string): { vec: MoodVec; confidence: number } | null {
   }
 
   // Near-misses in the mood table: "anxiousness", "tiredd", "exausted".
-  let best: string | null = null
-  let bestScore = 0
-  for (const candidate of Object.keys(MOOD_WORDS)) {
-    const score = similarity(word, candidate)
-    if (score > bestScore) {
-      bestScore = score
-      best = candidate
-    }
-  }
+  // Ties go to the earlier word in the table.
+  const { word: best, score: bestScore } = Object.keys(MOOD_WORDS).reduce<{ word: string | null, score: number }>(
+    (nearest, candidate) => {
+      const score = similarity(word, candidate)
+      return score > nearest.score ? { word: candidate, score } : nearest
+    },
+    { word: null, score: 0 },
+  )
   if (best && bestScore >= 0.6) {
     return { vec: MOOD_WORDS[best], confidence: bestScore * 0.9 }
   }
@@ -231,12 +230,8 @@ export function interpret(text: string): Reading {
     }
   }
 
-  const acc = [0, 0, 0, 0, 0, 0, 0]
-  let total = 0
-  for (const token of tokens) {
-    total += token.weight
-    for (let i = 0; i < 7; i++) acc[i] += token.vec[i] * token.weight
-  }
+  const total = tokens.reduce((sum, token) => sum + token.weight, 0)
+  const acc = Array.from({ length: 7 }, (_, i) => tokens.reduce((sum, token) => sum + token.vec[i] * token.weight, 0))
   const mean = acc.map((v) => clamp01(v / total))
 
   const expression: Expression = { ...NEUTRAL }

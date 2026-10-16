@@ -48,9 +48,9 @@ export function generateDrift(seedName: string): GeneratedDrift {
 function dialsFor(rng: Rng): Macros {
   const scene = pick(rng, SCENES)
   const out: Macros = { ...scene.macros }
-  for (const key of MACRO_KEYS) {
+  MACRO_KEYS.forEach((key) => {
     out[key] = clamp01(scene.macros[key] + centred(rng, 0.22))
-  }
+  })
   return out
 }
 
@@ -118,10 +118,11 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
     { defId: 'kit', chance: macros.pulse < 0.4 ? 0 : (macros.pulse - 0.4) * 1.6 },
   ]
 
-  const chosen = ['pad', 'bed']
-  for (const c of candidates) {
-    if (rng() < clamp01(c.chance)) chosen.push(c.defId)
-  }
+  const chosen = [
+    'pad',
+    'bed',
+    ...candidates.filter((c) => rng() < clamp01(c.chance)).map((c) => c.defId),
+  ]
   // Pad, bed, sub and dust are harmony, room, floor and surface: all of it
   // can be in the room and still nothing plays a line. Without a voice that
   // does, it is a drone rather than a drift, so one is always there.
@@ -132,9 +133,9 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
   // Later arrivals each toss their own coin rather than drawing from the
   // shared sequence, so a seed name kept from before they existed still gets
   // exactly the room it always did, plus at most a newcomer.
-  for (const c of [...soundscapeCandidates(macros), ...gestureCandidates(macros)]) {
-    if (rngAt(seed, 'generate', 'rack', c.defId)() < clamp01(c.chance)) chosen.push(c.defId)
-  }
+  const newcomers = [...soundscapeCandidates(macros), ...gestureCandidates(macros)]
+    .filter((c) => rngAt(seed, 'generate', 'rack', c.defId)() < clamp01(c.chance))
+  chosen.push(...newcomers.map((c) => c.defId))
 
   return chosen.map((defId, index) => {
     const slotRng = rngAt(seed, 'generate', 'slot', defId)
@@ -165,9 +166,9 @@ function rackFor(macros: Macros, seed: number): SlotDesc[] {
  *  same lineup still differ in more than their notes. */
 function characterFor(rng: Rng): Expression {
   const out: Expression = { ...NEUTRAL }
-  for (const key of EXPRESSION_KEYS) {
+  EXPRESSION_KEYS.forEach((key) => {
     out[key] = clamp01(NEUTRAL[key] + centred(rng, 0.25))
-  }
+  })
   return out
 }
 

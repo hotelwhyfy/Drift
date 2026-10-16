@@ -1,4 +1,4 @@
-import type { Expression } from '@/fuzzy/expression.ts'
+import type { ExpressionKey } from '@/fuzzy/expression.ts'
 import { NEUTRAL } from '@/fuzzy/expression.ts'
 import type { PhraseResult } from '@/fuzzy/types.ts'
 import { IGNORED_WORDS } from '@/fuzzy/lexiconData.ts'
@@ -20,24 +20,17 @@ export function positionPhrase(phrase: string): PhraseResult {
     return { expression: { ...NEUTRAL }, matches: [] }
   }
   const matches = words.map(positionWord)
-  const acc: Expression = { brightness: 0, weight: 0, motion: 0, tension: 0, density: 0 }
-  let total = 0
-  for (const m of matches) {
-    const w = 0.25 + m.confidence
-    total += w
-    acc.brightness += m.vector.brightness * w
-    acc.weight += m.vector.weight * w
-    acc.motion += m.vector.motion * w
-    acc.tension += m.vector.tension * w
-    acc.density += m.vector.density * w
-  }
+  const weights = matches.map((m) => 0.25 + m.confidence)
+  const total = weights.reduce((sum, w) => sum + w, 0)
+  const mean = (key: ExpressionKey): number =>
+    matches.reduce((sum, m, i) => sum + m.vector[key] * weights[i], 0) / total
   return {
     expression: {
-      brightness: acc.brightness / total,
-      weight: acc.weight / total,
-      motion: acc.motion / total,
-      tension: acc.tension / total,
-      density: acc.density / total,
+      brightness: mean('brightness'),
+      weight: mean('weight'),
+      motion: mean('motion'),
+      tension: mean('tension'),
+      density: mean('density'),
     },
     matches,
   }

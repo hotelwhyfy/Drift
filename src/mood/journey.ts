@@ -26,9 +26,9 @@ export function journeyEase(t: number): number {
 export function blendMacros(from: Macros, to: Macros, t: number): Macros {
   const eased = journeyEase(t)
   const out: Macros = { ...from }
-  for (const key of MACRO_KEYS) {
+  MACRO_KEYS.forEach((key) => {
     out[key] = clamp01(from[key] + (to[key] - from[key]) * eased)
-  }
+  })
   return out
 }
 

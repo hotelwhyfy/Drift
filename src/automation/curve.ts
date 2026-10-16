@@ -116,11 +116,10 @@ export function sampleCurve(points: Float32Array, phase: number): number {
  * disagree with itself.
  */
 export function curveFromPoints(points: readonly number[]): Curve {
-  const arr = new Float32Array(CURVE_RESOLUTION)
-  for (let i = 0; i < CURVE_RESOLUTION; i++) {
+  const arr = Float32Array.from({ length: CURVE_RESOLUTION }, (_, i) => {
     const v = points[i]
-    arr[i] = typeof v === 'number' && Number.isFinite(v) ? clamp01(v) : 0.5
-  }
+    return typeof v === 'number' && Number.isFinite(v) ? clamp01(v) : 0.5
+  })
   return { points: arr, character: characterise(arr) }
 }
 

@@ -55,17 +55,13 @@ export const strings: InstrumentDef = {
   },
   notes: (ctx) => {
     const voices = Math.round(ctx.params.voices ?? 3)
-    const out: NoteIntent[] = []
-    for (let i = 0; i < voices; i++) {
-      out.push({
-        role: 'chordal',
-        contour: -0.2 + (i / Math.max(1, voices - 1)) * 1.1,
-        weight: lerp(0.55, 0.8, ctx.rng()),
-        step: 0,
-        lengthSteps: 16 * 1.05,
-      })
-    }
-    return out
+    return Array.from({ length: voices }, (_, i): NoteIntent => ({
+      role: 'chordal',
+      contour: -0.2 + (i / Math.max(1, voices - 1)) * 1.1,
+      weight: lerp(0.55, 0.8, ctx.rng()),
+      step: 0,
+      lengthSteps: 16 * 1.05,
+    }))
   },
   controls: [
     { param: 'attack', label: 'Attack', group: 'bow' },

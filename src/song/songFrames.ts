@@ -8,9 +8,7 @@ import { barLengthSamples } from '@/engine/barLengthSamples.ts'
  * number of samples — its length rounded up — so this sums the same.
  */
 export function songFrames(song: Song, dials: Macros, sampleRate: number): number {
-  let frames = 0
-  for (let bar = 0; bar < song.lengthBars; bar++) {
-    frames += Math.ceil(barLengthSamples(tempoAtBar(song, dials, bar), sampleRate))
-  }
-  return frames
+  return Array.from({ length: song.lengthBars }, (_, bar) =>
+    Math.ceil(barLengthSamples(tempoAtBar(song, dials, bar), sampleRate)),
+  ).reduce((frames, barFrames) => frames + barFrames, 0)
 }

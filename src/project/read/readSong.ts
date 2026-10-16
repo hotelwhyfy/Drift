@@ -12,21 +12,21 @@ export function readSong(raw: unknown): Song {
   if (typeof raw !== 'object' || raw === null) return DEFAULT_SONG
   const record: Record<string, unknown> = { ...raw }
   const ends: SongEnd[] = ['loop', 'hold', 'stop']
-  const macros: Partial<Record<MacroKey, MacroTrack>> = {}
-  if (typeof record.macros === 'object' && record.macros !== null) {
-    const tracks: Record<string, unknown> = { ...record.macros }
-    for (const key of MACRO_KEYS) {
+  const tracks: Record<string, unknown> =
+    typeof record.macros === 'object' && record.macros !== null ? { ...record.macros } : {}
+  const macros: Partial<Record<MacroKey, MacroTrack>> = Object.fromEntries(
+    MACRO_KEYS.flatMap((key): [MacroKey, MacroTrack][] => {
       const track = tracks[key]
-      if (typeof track !== 'object' || track === null) continue
+      if (typeof track !== 'object' || track === null) return []
       const envelope = readEnvelope(Reflect.get(track, 'points'))
-      if (envelope.points.length === 0) continue
-      macros[key] = { enabled: readBoolean(Reflect.get(track, 'enabled'), true), envelope }
-    }
-  }
-  const sections = Array.isArray(record.harmony)
+      if (envelope.points.length === 0) return []
+      return [[key, { enabled: readBoolean(Reflect.get(track, 'enabled'), true), envelope }]]
+    }),
+  )
+  const sections = (Array.isArray(record.harmony)
     ? record.harmony.map(readSection).filter((s): s is HarmonySection => s !== null)
     : []
-  sections.sort((a, b) => a.startBar - b.startBar)
+  ).sort((a, b) => a.startBar - b.startBar)
   const harmony = sections.filter((s, i) => i === sections.length - 1 || sections[i + 1].startBar !== s.startBar)
   return {
     lengthBars: Math.round(readNumber(record.lengthBars, DEFAULT_SONG.lengthBars, 1, MAX_SONG_BARS)),

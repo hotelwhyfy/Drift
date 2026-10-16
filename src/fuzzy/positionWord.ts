@@ -31,12 +31,14 @@ export function positionWord(word: string): WordMatch {
   if (exact) return { word: w, confidence: 1, nearest: w, vector: toExpression(exact) }
 
   const tri = trigrams(w)
-  let bestWord: string | null = null
-  let bestScore = 0
-  for (const [candidate, candidateTri] of TRIGRAMS) {
-    const s = similarity(tri, candidateTri)
-    if (s > bestScore) { bestScore = s; bestWord = candidate }
-  }
+  // Ties go to the earlier word in the table.
+  const { word: bestWord, score: bestScore } = [...TRIGRAMS].reduce<{ word: string | null, score: number }>(
+    (best, [candidate, candidateTri]) => {
+      const score = similarity(tri, candidateTri)
+      return score > best.score ? { word: candidate, score } : best
+    },
+    { word: null, score: 0 },
+  )
 
   const rng = createRng(deriveSeed('word', w))
   const hashed: Expression = {

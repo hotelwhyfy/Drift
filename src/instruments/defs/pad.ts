@@ -79,16 +79,12 @@ export const pad: InstrumentDef = {
     // The pad restates the chord rather than playing a line: one intent per
     // voice of the chord, splayed so the entry breathes instead of striking.
     const voices = Math.round(ctx.params.voices ?? 3 + clamp01(ctx.expression.density) * 2)
-    const out: NoteIntent[] = []
-    for (let i = 0; i < voices; i++) {
-      out.push({
-        role: 'chordal',
-        contour: -0.7 + (i / Math.max(1, voices - 1)) * 1.5,
-        weight: lerp(0.5, 0.85, ctx.rng()),
-        step: 0,
-        lengthSteps: 16 * 1.05,
-      })
-    }
-    return out
+    return Array.from({ length: voices }, (_, i): NoteIntent => ({
+      role: 'chordal',
+      contour: -0.7 + (i / Math.max(1, voices - 1)) * 1.5,
+      weight: lerp(0.5, 0.85, ctx.rng()),
+      step: 0,
+      lengthSteps: 16 * 1.05,
+    }))
   },
 }

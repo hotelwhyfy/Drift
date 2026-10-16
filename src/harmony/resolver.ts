@@ -84,27 +84,21 @@ export class Resolver {
     // nearby, though the same tones an octave away were free.
     const low = register.centre - register.span - 6
     const high = register.centre + register.span + 6
-    const scored: number[] = []
-    for (const pc of candidates) {
+    const scored = candidates.flatMap((pc) => {
       const nearest = this.nearestInOctave(pc, target)
-      for (let p = nearest - 24; p <= nearest + 24; p += 12) {
-        if (p >= low && p <= high) scored.push(p)
-      }
-    }
+      return [-24, -12, 0, 12, 24].map((octave) => nearest + octave).filter((p) => p >= low && p <= high)
+    })
     if (scored.length === 0) return null
     scored.sort((a, b) => Math.abs(a - target) - Math.abs(b - target))
 
     const start = intent.step
     const end = intent.step + Math.max(1, intent.lengthSteps)
-    for (const pitch of scored) {
-      if (this.acceptable(pitch, owner, intent.role, start, end)) {
-        this.sounding.push({ pitch, owner, start, end })
-        return pitch
-      }
-    }
+    const pitch = scored.find((p) => this.acceptable(p, owner, intent.role, start, end))
     // Everything collided. Staying silent is a legitimate musical answer and a
     // far better one than forcing a note nobody has room for.
-    return null
+    if (pitch === undefined) return null
+    this.sounding.push({ pitch, owner, start, end })
+    return pitch
   }
 
   /**
@@ -168,26 +162,23 @@ export class Resolver {
     start: number,
     end: number,
   ): boolean {
-    for (const other of this.sounding) {
-      // Only notes actually sounding at the same time can collide. Comparing
-      // every note in the bar instead — as this once did — forbids a melodic
-      // line from moving by a semitone, which is not a collision at all but
-      // simply a line moving by a semitone.
-      if (other.end <= start || other.start >= end) continue
-      const gap = Math.abs(pitch - other.pitch)
-      if (other.owner === owner) {
-        // An instrument may double itself at the octave but not in unison.
+    // Only notes actually sounding at the same time can collide. Comparing
+    // every note in the bar instead — as this once did — forbids a melodic
+    // line from moving by a semitone, which is not a collision at all but
+    // simply a line moving by a semitone.
+    return this.sounding
+      .filter((other) => other.end > start && other.start < end)
+      .every((other) => {
+        const gap = Math.abs(pitch - other.pitch)
+        // Unison muddies both parts, whoever owns them.
         if (gap === 0) return false
-        continue
-      }
-      // Unison between two different instruments muddies both.
-      if (gap === 0) return false
-      // Minor seconds and minor ninths between parts read as errors.
-      if (gap === 1 || gap === 13) return false
-      // Anything close together low down turns to mud regardless of interval.
-      if (Math.min(pitch, other.pitch) < 52 && gap < 7 && role !== 'bass') return false
-    }
-    return true
+        // An instrument may double itself at the octave.
+        if (other.owner === owner) return true
+        // Minor seconds and minor ninths between parts read as errors.
+        if (gap === 1 || gap === 13) return false
+        // Anything close together low down turns to mud regardless of interval.
+        return !(Math.min(pitch, other.pitch) < 52 && gap < 7 && role !== 'bass')
+      })
   }
 
   /** Register presets by role, so instruments need not invent their own. */

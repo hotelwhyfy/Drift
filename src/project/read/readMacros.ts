@@ -6,6 +6,6 @@ export function readMacros(raw: unknown): Macros {
   const out: Macros = { ...DEFAULT_MACROS }
   if (typeof raw !== 'object' || raw === null) return out
   const record: Record<string, unknown> = { ...raw }
-  for (const key of MACRO_KEYS) out[key] = readNumber(record[key], DEFAULT_MACROS[key])
+  MACRO_KEYS.forEach((key) => { out[key] = readNumber(record[key], DEFAULT_MACROS[key]) })
   return out
 }

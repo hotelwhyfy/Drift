@@ -40,12 +40,12 @@ export const NEUTRAL: Expression = {
 
 export function blendExpression(a: Expression, b: Expression, t: number): Expression {
   const out: Expression = { ...a }
-  for (const k of EXPRESSION_KEYS) out[k] = a[k] + (b[k] - a[k]) * t
+  EXPRESSION_KEYS.forEach((k) => { out[k] = a[k] + (b[k] - a[k]) * t })
   return out
 }
 
 export function clampExpression(e: Expression): Expression {
   const out: Expression = { ...e }
-  for (const k of EXPRESSION_KEYS) out[k] = e[k] < 0 ? 0 : e[k] > 1 ? 1 : e[k]
+  EXPRESSION_KEYS.forEach((k) => { out[k] = e[k] < 0 ? 0 : e[k] > 1 ? 1 : e[k] })
   return out
 }

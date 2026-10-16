@@ -6,6 +6,6 @@ export function readExpression(raw: unknown): Expression {
   const out: Expression = { ...NEUTRAL }
   if (typeof raw !== 'object' || raw === null) return out
   const record: Record<string, unknown> = { ...raw }
-  for (const key of EXPRESSION_KEYS) out[key] = readNumber(record[key], NEUTRAL[key])
+  EXPRESSION_KEYS.forEach((key) => { out[key] = readNumber(record[key], NEUTRAL[key]) })
   return out
 }

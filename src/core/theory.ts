@@ -50,12 +50,8 @@ export function quantiseToMode(mode: Mode, semitone: number, root: number): numb
   const rel = semitone - root
   const octave = Math.floor(rel / 12)
   const pc = rel - octave * 12
-  let best = mode.steps[0]
-  let bestD = 99
-  for (let i = 0; i < mode.steps.length; i++) {
-    const d = Math.abs(mode.steps[i] - pc)
-    if (d < bestD) { bestD = d; best = mode.steps[i] }
-  }
+  // Ties go to the lower step.
+  const best = mode.steps.reduce((nearest, step) => (Math.abs(step - pc) < Math.abs(nearest - pc) ? step : nearest))
   return root + octave * 12 + best
 }
 
@@ -69,12 +65,8 @@ export function stepInMode(mode: Mode, root: number, pitch: number, steps: numbe
   const rel = pitch - root
   const octave = Math.floor(rel / 12)
   const pc = rel - octave * 12
-  let idx = 0
-  let best = 99
-  for (let i = 0; i < n; i++) {
-    const d = Math.abs(mode.steps[i] - pc)
-    if (d < best) { best = d; idx = i }
-  }
+  // Ties go to the lower step.
+  const idx = mode.steps.reduce((nearest, step, i) => (Math.abs(step - pc) < Math.abs(mode.steps[nearest] - pc) ? i : nearest), 0)
   const target = idx + steps
   const targetOctave = Math.floor(target / n)
   const targetIdx = target - targetOctave * n
@@ -151,19 +143,19 @@ export function voiceNear(
   // each note in the lowest octave that still clears the one below it. Common
   // tones therefore stay put and the rest move by a step or two.
   const sorted = [...notes].sort((a, b) => a - b)
-  const out: number[] = []
-  let floor = target - 7
-  for (let i = 0; i < sorted.length; i++) {
-    let p = sorted[i]
+  let out = sorted.reduce<number[]>((stack, note) => {
+    // The floor is the previous note plus a step, so there are no unisons and
+    // no minor seconds at the bottom of the stack.
+    const floor = stack.length > 0 ? stack[stack.length - 1] + 2 : target - 7
+    let p = note
     while (p < floor) p += 12
     while (p - 12 >= floor) p -= 12
-    out.push(p)
-    floor = p + 2 // no unisons, no minor seconds at the bottom of the stack
-  }
+    return [...stack, p]
+  }, [])
   // A stack that still overruns the window moves as a whole, so its notes
   // stay distinct; clamping them one by one would fold them together.
   while (out[out.length - 1] > centre + 26 && out[0] - 12 >= centre - 26) {
-    for (let i = 0; i < out.length; i++) out[i] -= 12
+    out = out.map((p) => p - 12)
   }
   return out.map((p) => clamp(p, centre - 26, centre + 26))
 }
