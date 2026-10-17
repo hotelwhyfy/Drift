@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Opening } from '@/ui/mood/Opening.tsx'
 import { Listening } from '@/ui/mood/Listening.tsx'
 import { Dial } from '@/ui/Dial.tsx'
@@ -11,7 +11,7 @@ import { interpret } from '@/mood/interpret.ts'
 import type { Reading } from '@/mood/interpret.ts'
 import { arrangementFor } from '@/mood/arrange.ts'
 import type { Arrangement } from '@/mood/arrange.ts'
-import { Journey } from '@/mood/journey.ts'
+import { useJourney } from '@/ui/hooks/useJourney.ts'
 import { MACRO_INFO, DEFAULT_MACROS } from '@/macros/macros.ts'
 import type { Macros, MacroKey } from '@/macros/macros.ts'
 import { buildPatch, expressionFor, modeNameAt } from '@/macros/patch.ts'
@@ -19,9 +19,6 @@ import type { SlotDesc } from '@/engine/types.ts'
 import { Tooltip } from '@/ui/Tooltip.tsx'
 
 type Phase = 'opening' | 'playing'
-
-/** How often the journey nudges the dials. Slow — nothing here is urgent. */
-const JOURNEY_TICK_MS = 1800
 
 export function MoodApp() {
   const [prompt, setPrompt] = useState<Prompt>(() => choosePrompt())
@@ -31,11 +28,16 @@ export function MoodApp() {
   const [macros, setMacros] = useState<Macros>(DEFAULT_MACROS)
   const [slots, setSlots] = useState<SlotDesc[]>([])
   const [deskOpen, setDeskOpen] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [steering, setSteering] = useState(false)
 
   const { player, playing, snapshot } = usePlayer(DEFAULT_MACROS, 1)
-  const journeyRef = useRef<Journey | null>(null)
+
+  const { steering, progress, begin: beginJourney, takeOver, stop: stopJourney } = useJourney(
+    phase === 'playing',
+    (next) => {
+      setMacros(next)
+      player.setMacros(next)
+    },
+  )
 
   const accent = useAccent(macros.colour)
   // Read the real tempo from the patch rather than re-deriving it here, so the
@@ -59,43 +61,9 @@ export function MoodApp() {
     // to the one the engine had already scheduled.
     void player.play(0)
 
-    const journey = new Journey(plan.macros, plan.resting, plan.minutes)
-    journey.start(performance.now())
-    journeyRef.current = journey
-    setSteering(true)
-    setProgress(0)
+    beginJourney(plan.macros, plan.resting, plan.minutes)
     setPhase('playing')
-  }, [player])
-
-  // The journey: a slow, one-way move from where they are to somewhere calmer.
-  useEffect(() => {
-    if (phase !== 'playing') return
-    const timer = window.setInterval(() => {
-      const journey = journeyRef.current
-      if (!journey || !journey.isSteering) return
-      const state = journey.at(performance.now())
-      setProgress(state.progress)
-      setMacros(state.macros)
-      player.setMacros(state.macros)
-      if (state.arrived) {
-        journey.release()
-        setSteering(false)
-      }
-    }, JOURNEY_TICK_MS)
-    return () => window.clearInterval(timer)
-  }, [phase, player])
-
-  /**
-   * Any deliberate touch of a control ends the steering. The journey is a
-   * suggestion; dragging the dials out from under someone who has taken hold of
-   * them would be indefensible.
-   */
-  const takeOver = useCallback(() => {
-    if (journeyRef.current?.isSteering) {
-      journeyRef.current.release()
-      setSteering(false)
-    }
-  }, [])
+  }, [player, beginJourney])
 
   const setMacro = useCallback((key: MacroKey, value: number) => {
     takeOver()
@@ -113,15 +81,13 @@ export function MoodApp() {
 
   const askAgain = useCallback(() => {
     player.stop()
-    journeyRef.current?.release()
-    journeyRef.current = null
-    setSteering(false)
+    stopJourney()
     setDeskOpen(false)
     setReading(null)
     setArrangement(null)
     setPrompt(choosePrompt())
     setPhase('opening')
-  }, [player])
+  }, [player, stopJourney])
 
   if (phase === 'opening') {
     return <Opening prompt={prompt} onAnswer={answer} />
