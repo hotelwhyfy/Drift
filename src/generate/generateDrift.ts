@@ -78,7 +78,7 @@ const VOICES: readonly string[] = ['rhodes', 'strings', 'shimmer', 'glass']
  * and only half follow, so a dense setting fills them out without filling
  * every step.
  */
-const SPARSE: readonly string[] = ['rhodes', 'glass', 'arp']
+const SPARSE: readonly string[] = ['rhodes', 'glass', 'arp', 'wind']
 const SPARSE_FOLLOW = 0.5
 
 /**
@@ -90,6 +90,8 @@ function soundscapeCandidates(macros: Macros): Candidate[] {
     { defId: 'drone', chance: (0.05 + macros.space * 0.3 + macros.warmth * 0.2) * (1 - macros.pulse * 0.6) },
     { defId: 'choir', chance: 0.05 + macros.space * 0.35 + macros.drift * 0.1 },
     { defId: 'field', chance: (0.1 + macros.space * 0.3) * (1 - macros.pulse * 0.5) },
+    { defId: 'brass', chance: (0.04 + macros.space * 0.25 + macros.warmth * 0.2) * (1 - macros.pulse * 0.5) },
+    { defId: 'wind', chance: (0.05 + macros.space * 0.3 + macros.drift * 0.15) * (1 - macros.pulse * 0.4) },
   ]
 }
 

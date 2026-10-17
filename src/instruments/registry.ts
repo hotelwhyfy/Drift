@@ -13,6 +13,8 @@ import { shimmer } from '@/instruments/defs/shimmer.ts'
 import { drone } from '@/instruments/defs/drone.ts'
 import { choir } from '@/instruments/defs/choir.ts'
 import { field } from '@/instruments/defs/field.ts'
+import { brass } from '@/instruments/defs/brass.ts'
+import { wind } from '@/instruments/defs/wind.ts'
 
 /*
  * The rule bases in defs/ are the design documents for these instruments. Each
@@ -23,7 +25,7 @@ import { field } from '@/instruments/defs/field.ts'
 
 /** In the order the picker lists them: the harmony and the room first. */
 export const INSTRUMENTS: readonly InstrumentDef[] = [
-  pad, strings, choir, drone, shimmer, bed, field, sub, glass, arp, rhodes, dust, kit, cymbals,
+  pad, strings, choir, brass, drone, shimmer, bed, field, sub, glass, arp, rhodes, wind, dust, kit, cymbals,
 ]
 
 export function instrumentById(id: string): InstrumentDef | undefined {

@@ -76,7 +76,7 @@ describe('determinism', () => {
     const run = (sizes: number[]) => {
       const e = new Engine(SR, DEFAULT_MACROS, 31)
       e.snapMacros(DEFAULT_MACROS)
-      for (const id of ['drone', 'choir', 'field', 'arp', 'cymbals']) e.rack.add(id)
+      for (const id of ['drone', 'choir', 'field', 'arp', 'cymbals', 'brass', 'wind']) e.rack.add(id)
       e.seek(0)
       const l = new Float32Array(frames)
       const r = new Float32Array(frames)
@@ -102,7 +102,7 @@ describe('determinism', () => {
     }
     const build = (walk: boolean) => {
       const rack = new Rack(SR, 7)
-      for (const id of [...DEFAULT_RACK, 'drone', 'choir', 'field', 'arp', 'cymbals']) rack.add(id)
+      for (const id of [...DEFAULT_RACK, 'drone', 'choir', 'field', 'arp', 'cymbals', 'brass', 'wind']) rack.add(id)
       if (walk) for (let bar = 0; bar < 64; bar++) rack.bar(bar, ctx, 72, 0.1, 0.3)
       return rack.bar(64, ctx, 72, 0.1, 0.3)
     }
