@@ -20,7 +20,6 @@ import { composeAt } from '@/song/composeAt.ts'
 import { HarmonyRow } from '@/ui/HarmonyRow.tsx'
 import { generateDrift } from '@/generate/generateDrift.ts'
 import { NOTE_NAMES } from '@/core/theory.ts'
-import { accentFor } from '@/ui/accent.ts'
 import { loadSession } from '@/ui/loadSession.ts'
 import { randomSeedName } from '@/ui/randomSeedName.ts'
 import type { Session } from '@/ui/types.ts'
@@ -33,6 +32,7 @@ import type { CaptureLength } from '@/ui/hooks/useCapture.ts'
 import { useFileDrop } from '@/ui/hooks/useFileDrop.ts'
 import { useShortcuts } from '@/ui/hooks/useShortcuts.ts'
 import { usePlayer } from '@/ui/hooks/usePlayer.ts'
+import { useAccent } from '@/ui/hooks/useAccent.ts'
 import { usePlayerSync } from '@/ui/hooks/usePlayerSync.ts'
 
 export function App() {
@@ -55,7 +55,7 @@ export function App() {
     () => (playing && snapshot ? snapshot.macros : macrosAt(song, macros, cursor).macros),
     [playing, snapshot, song, macros, cursor],
   )
-  const accent = accentFor(heard.colour)
+  const accent = useAccent(heard.colour)
   const patch = useMemo(() => buildPatch(heard), [heard])
   const seconds = useMemo(() => songSeconds(song, macros), [song, macros])
   /** Key and mode at the playhead, sections included. */
@@ -94,10 +94,6 @@ export function App() {
     }
   }, [player])
   const history = useSessionHistory(session, restore)
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent', accent)
-  }, [accent])
 
   /**
    * Turning a dial the song drives writes into the song at the playhead,

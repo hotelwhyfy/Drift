@@ -4,7 +4,7 @@ import { Listening } from '@/ui/mood/Listening.tsx'
 import { Dial } from '@/ui/Dial.tsx'
 import { RackView } from '@/ui/RackView.tsx'
 import { usePlayer } from '@/ui/hooks/usePlayer.ts'
-import { accentFor } from '@/ui/accent.ts'
+import { useAccent } from '@/ui/hooks/useAccent.ts'
 import { choosePrompt } from '@/mood/prompts.ts'
 import type { Prompt } from '@/mood/prompts.ts'
 import { interpret } from '@/mood/interpret.ts'
@@ -37,13 +37,10 @@ export function MoodApp() {
   const { player, playing, snapshot } = usePlayer(DEFAULT_MACROS, 1)
   const journeyRef = useRef<Journey | null>(null)
 
-  const accent = accentFor(macros.colour)
+  const accent = useAccent(macros.colour)
   // Read the real tempo from the patch rather than re-deriving it here, so the
   // readout cannot drift away from what is actually playing.
   const tempo = Math.round(buildPatch(macros).compose.tempo)
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent', accent)
-  }, [accent])
 
   /** Everything downstream of the answer happens here. */
   const answer = useCallback((text: string) => {
