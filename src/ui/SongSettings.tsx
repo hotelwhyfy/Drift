@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCommitField } from '@/ui/hooks/useCommitField.ts'
 import type { Song, SongEnd } from '@/song/types.ts'
 import { MAX_SONG_BARS, MIN_TUNING, MAX_TUNING } from '@/song/song.ts'
 import { withLength } from '@/song/withLength.ts'
@@ -19,20 +19,17 @@ interface Props {
 
 /** The song's length, what happens at its end, and its concert pitch. */
 export function SongSettings({ song, seconds, autoTuning, onSongChange }: Props) {
-  const [lengthDraft, setLengthDraft] = useState<string | null>(null)
-  const [tuningDraft, setTuningDraft] = useState<string | null>(null)
-
   const setLength = (bars: number): void => {
     const next = withLength(song, bars)
     if (next) onSongChange(next)
   }
+  const length = useCommitField(String(song.lengthBars), (text) => setLength(Number(text)))
 
   /** Empty hands the reference back to the dials. */
-  const setTuning = (text: string): void => {
-    setTuningDraft(null)
+  const tuning = useCommitField(song.tuning === null ? '' : String(song.tuning), (text) => {
     const next = withTuning(song, text)
     if (next) onSongChange(next)
-  }
+  })
 
   return (
     <>
@@ -41,12 +38,7 @@ export function SongSettings({ song, seconds, autoTuning, onSongChange }: Props)
           type="number"
           min={1}
           max={MAX_SONG_BARS}
-          value={lengthDraft ?? String(song.lengthBars)}
-          onChange={(e) => setLengthDraft(e.target.value)}
-          onBlur={(e) => { setLength(Number(e.target.value)); setLengthDraft(null) }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { setLength(Number(e.currentTarget.value)); setLengthDraft(null) }
-          }}
+          {...length}
           aria-label="Song length in bars"
         />
         <span>bars · {formatDuration(seconds)}</span>
@@ -73,10 +65,7 @@ export function SongSettings({ song, seconds, autoTuning, onSongChange }: Props)
             max={MAX_TUNING}
             step={0.5}
             placeholder={autoTuning.toFixed(1)}
-            value={tuningDraft ?? (song.tuning === null ? '' : String(song.tuning))}
-            onChange={(e) => setTuningDraft(e.target.value)}
-            onBlur={(e) => setTuning(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') setTuning(e.currentTarget.value) }}
+            {...tuning}
             aria-label="Reference pitch for A4 in hertz"
           />
           <span>{song.tuning === null ? 'Hz · auto' : 'Hz'}</span>

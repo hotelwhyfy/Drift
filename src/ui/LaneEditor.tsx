@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
+import { useCommitField } from '@/ui/hooks/useCommitField.ts'
 import type { Lane, LaneSource } from '@/automation/lane.ts'
 import { curveFromStroke, CURVE_RESOLUTION } from '@/automation/curve.ts'
 import type { Point } from '@/automation/curve.ts'
@@ -242,12 +243,10 @@ export function LaneEditor({ lane, def, accent, phase, onChange, onRemove }: Pro
  * a minute of music.
  */
 function BarsField({ bars, onChange }: { bars: number; onChange: (bars: number) => void }) {
-  const [draft, setDraft] = useState<string | null>(null)
-  const commit = (text: string): void => {
+  const field = useCommitField(String(bars), (text) => {
     const n = Number(text)
     if (Number.isFinite(n) && n > 0) onChange(Math.min(MAX_BARS, Math.max(0.25, n)))
-    setDraft(null)
-  }
+  })
   return (
     <span className="lane-bars">
       <input
@@ -255,10 +254,7 @@ function BarsField({ bars, onChange }: { bars: number; onChange: (bars: number) 
         min={0.25}
         max={MAX_BARS}
         step={1}
-        value={draft ?? String(bars)}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={(e) => commit(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') commit(e.currentTarget.value) }}
+        {...field}
         aria-label="Loop length in bars"
       />
       <span className="lane-bars-unit">bars</span>
