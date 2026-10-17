@@ -963,7 +963,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .knob-row { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: flex-start; }
 .knob-row .dial { gap: 3px; width: 58px; }
-.knob-row .dial-value { font-size: 10.5px; }
+.knob-row .dial-value { font-size: 10.5px; text-align: center; }
 .knob-row .dial-label { font-size: 9.5px; letter-spacing: 0.04em; text-align: center; }
 
 .knob-choice { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 12px; }
