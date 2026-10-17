@@ -8,6 +8,7 @@ import { controlsOf } from '@/instruments/controlsOf.ts'
 import { released } from '@/ui/released.ts'
 import { Select } from '@/ui/Select.tsx'
 import type { SelectOption } from '@/ui/types.ts'
+import { canvasScale } from '@/ui/canvasScale.ts'
 
 /** Follow lanes can't be made here, only kept: one is listed only while the lane is one. */
 const sourceOptions = (following: boolean): SelectOption<LaneSource['kind']>[] => {
@@ -57,7 +58,7 @@ export function LaneEditor({ lane, def, accent, phase, onChange, onRemove }: Pro
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const dpr = canvasScale()
     const rect = canvas.getBoundingClientRect()
     canvas.width = Math.max(1, rect.width * dpr)
     canvas.height = Math.max(1, rect.height * dpr)

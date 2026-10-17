@@ -1,5 +1,6 @@
 import type { BarScale } from '@/ui/barScale.ts'
 import { gridStep } from '@/ui/gridStep.ts'
+import { canvasScale } from '@/ui/canvasScale.ts'
 
 export const RULER_HEIGHT = 24
 
@@ -18,7 +19,7 @@ export interface RulerView {
 export function drawRuler(canvas: HTMLCanvasElement, { scale, width, lengthBars, playhead, scrub, accent }: RulerView): void {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const dpr = canvasScale()
   canvas.width = Math.floor(width * dpr)
   canvas.height = Math.floor(RULER_HEIGHT * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)

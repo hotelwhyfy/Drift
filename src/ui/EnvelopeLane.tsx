@@ -5,6 +5,7 @@ import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
 import type { BarScale } from '@/ui/barScale.ts'
 import { gridStep } from '@/ui/gridStep.ts'
 import { released } from '@/ui/released.ts'
+import { canvasScale } from '@/ui/canvasScale.ts'
 
 interface Props {
   envelope: Envelope
@@ -50,7 +51,7 @@ export function EnvelopeLane({
     if (!canvas || width <= 0) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const dpr = canvasScale()
     canvas.width = Math.floor(width * dpr)
     canvas.height = Math.floor(HEIGHT * dpr)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)

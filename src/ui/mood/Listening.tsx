@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCanvasLoop } from '@/ui/hooks/useCanvasLoop.ts'
 import type { Player } from '@/audio/player.ts'
 
 interface Props {
@@ -16,34 +16,10 @@ interface Props {
  * as it goes.
  */
 export function Listening({ player, playing, accent }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    let raf = 0
+  const canvasRef = useCanvasLoop((ctx) => {
     let phase = 0
     let level = 0
-
-    const resize = (): void => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      const rect = canvas.getBoundingClientRect()
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr))
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr))
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    }
-    resize()
-    const observer = new ResizeObserver(resize)
-    observer.observe(canvas)
-
-    const draw = (): void => {
-      raf = requestAnimationFrame(draw)
-      const rect = canvas.getBoundingClientRect()
-      const w = rect.width
-      const h = rect.height
-      ctx.clearRect(0, 0, w, h)
+    return (w, h) => {
       phase += 0.0016
 
       const data = playing ? player?.frequencyData ?? null : null
@@ -85,12 +61,6 @@ export function Listening({ player, playing, accent }: Props) {
         ctx.stroke()
       }
       ctx.globalAlpha = 1
-    }
-    draw()
-
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
     }
   }, [player, playing, accent])
 
