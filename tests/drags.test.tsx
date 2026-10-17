@@ -153,6 +153,15 @@ describe('XYPad dragging', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('also stops when the capture is taken from it', () => {
+    const { onChange, field } = setup()
+    down(field, 10, 10)
+    onChange.mockClear()
+    fireEvent.lostPointerCapture(field, { pointerId: 1 })
+    move(field, 50, 50)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('treats a move with no button held as the release it never saw', () => {
     const { onChange, field } = setup()
     down(field, 10, 10)
@@ -231,6 +240,21 @@ describe('EnvelopeLane editing', () => {
     for (const end of [
       (el: Element) => fireEvent.pointerUp(el, { pointerId: 1 }),
       (el: Element) => move(el, 130, yOf(0.5), { buttons: 0 }),
+    ]) {
+      const { lane, spy } = setup([point(5, 0.5)])
+      down(lane, 50, yOf(0.5))
+      end(lane)
+      spy.mockClear()
+      move(lane, 150, yOf(0.9))
+      expect(spy).not.toHaveBeenCalled()
+      cleanup()
+    }
+  })
+
+  it('stops dragging when the gesture is cancelled or the capture is taken away', () => {
+    for (const end of [
+      (el: Element) => fireEvent.pointerCancel(el, { pointerId: 1 }),
+      (el: Element) => fireEvent.lostPointerCapture(el, { pointerId: 1 }),
     ]) {
       const { lane, spy } = setup([point(5, 0.5)])
       down(lane, 50, yOf(0.5))

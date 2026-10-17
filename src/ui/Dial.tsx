@@ -1,5 +1,5 @@
-import { useCallback, useRef } from 'react'
-import { released } from '@/ui/released.ts'
+import { useCallback } from 'react'
+import { usePointerDrag } from '@/ui/hooks/usePointerDrag.ts'
 
 interface DialProps {
   label: string
@@ -48,37 +48,15 @@ export function Dial({
   const SIZE = size
   const R = size * (32 / 84)
   const CIRC = 2 * Math.PI * R
-  const dragging = useRef<{ y: number; start: number } | null>(null)
-
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.currentTarget.setPointerCapture(e.pointerId)
-      dragging.current = { y: e.clientY, start: value }
-    },
-    [value],
-  )
-
-  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    dragging.current = null
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
-  }, [])
-
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const d = dragging.current
-      if (!d) return
-      if (released(e)) {
-        onPointerUp(e)
-        return
-      }
+  const drag = usePointerDrag<{ y: number; start: number }, HTMLDivElement>({
+    start: (e) => ({ y: e.clientY, start: value }),
+    move: (d, e) => {
       // Shift gives a ten-times finer gesture, which is the difference between
       // "somewhere near there" and actually placing a value.
       const scale = e.shiftKey ? 0.0006 : 0.006
-      const next = Math.min(1, Math.max(0, d.start + (d.y - e.clientY) * scale))
-      onChange(next)
+      onChange(Math.min(1, Math.max(0, d.start + (d.y - e.clientY) * scale)))
     },
-    [onChange, onPointerUp],
-  )
+  })
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -116,11 +94,7 @@ export function Dial({
         aria-valuetext={low && high
           ? `${label} ${Math.round(value * 100)} percent, between ${low} and ${high}`
           : `${label} ${display ?? `${Math.round(value * 100)} percent`}${auto ? ', automatic' : ''}${automated ? ', automated' : ''}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onLostPointerCapture={onPointerUp}
+        {...drag}
         onKeyDown={onKeyDown}
         onDoubleClick={() => (onReset ? onReset() : onChange(0.5))}
         style={size === DEFAULT_SIZE ? undefined : { width: size, height: size }}

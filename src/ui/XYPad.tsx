@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import type { ExpressionKey } from '@/fuzzy/expression.ts'
 import { EXPRESSION_INFO } from '@/fuzzy/expression.ts'
-import { released } from '@/ui/released.ts'
+import { usePointerDrag } from '@/ui/hooks/usePointerDrag.ts'
 import { Select } from '@/ui/Select.tsx'
 import type { SelectOption } from '@/ui/types.ts'
 
@@ -45,7 +45,6 @@ const ends = (k: ExpressionKey): [string, string] => {
  */
 export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAxisChange, automated }: Props) {
   const ref = useRef<HTMLDivElement>(null)
-  const dragging = useRef(false)
 
   const fromEvent = useCallback((e: React.PointerEvent) => {
     const el = ref.current
@@ -56,6 +55,14 @@ export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAx
     const ny = Math.min(1, Math.max(0, 1 - (e.clientY - rect.top) / rect.height))
     onChange(nx, ny)
   }, [onChange])
+
+  const drag = usePointerDrag<true, HTMLDivElement>({
+    start: (e) => {
+      fromEvent(e)
+      return true
+    },
+    move: (_, e) => fromEvent(e),
+  })
 
   const [xLow, xHigh] = ends(xKey)
   const [yLow, yHigh] = ends(yKey)
@@ -75,21 +82,7 @@ export function XYPad({ xKey, yKey, x, y, ghostX, ghostY, accent, onChange, onAx
         ref={ref}
         role="application"
         aria-label={`${label(xKey)} against ${label(yKey)}`}
-        onPointerDown={(e) => {
-          dragging.current = true
-          e.currentTarget.setPointerCapture(e.pointerId)
-          fromEvent(e)
-        }}
-        onPointerMove={(e) => {
-          if (!dragging.current) return
-          if (released(e)) dragging.current = false
-          else fromEvent(e)
-        }}
-        onPointerUp={(e) => {
-          dragging.current = false
-          e.currentTarget.releasePointerCapture(e.pointerId)
-        }}
-        onPointerCancel={() => { dragging.current = false }}
+        {...drag}
       >
         <span className="xy-end xy-top">{yHigh}</span>
         <span className="xy-end xy-bottom">{yLow}</span>

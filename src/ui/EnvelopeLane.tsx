@@ -4,7 +4,7 @@ import { BREAKPOINT_SHAPES } from '@/song/song.ts'
 import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
 import type { BarScale } from '@/ui/barScale.ts'
 import { gridStep } from '@/ui/gridStep.ts'
-import { released } from '@/ui/released.ts'
+import { usePointerDrag } from '@/ui/hooks/usePointerDrag.ts'
 import { canvasScale } from '@/ui/canvasScale.ts'
 
 interface Props {
@@ -39,7 +39,6 @@ export function EnvelopeLane({
   envelope, enabled, fallback, scale, width, lengthBars, playhead, colour, accent, onChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const drag = useRef<{ index: number } | null>(null)
   const [hover, setHover] = useState<number | null>(null)
   const points = envelope.points
 
@@ -170,40 +169,38 @@ export function EnvelopeLane({
     onChange({ points: points.map((p, i) => (i === index ? moved : p)) })
   }
 
+  const drag = usePointerDrag<{ index: number }, HTMLCanvasElement>({
+    start: (e) => {
+      if (e.button !== 0) return null
+      const { x, y } = local(e)
+      let index = hit(x, y)
+      if (index < 0) {
+        const bar = snap(scale.toBar(x), e.altKey)
+        const before = [...points].reverse().find((p) => p.bar < bar)
+        const added: Breakpoint = { bar, value: valueOf(y), shape: before?.shape ?? 'linear' }
+        const next = [...points.filter((p) => p.bar !== bar), added].sort((a, b) => a.bar - b.bar)
+        index = next.indexOf(added)
+        onChange({ points: next })
+      }
+      return { index }
+    },
+    move: (d, e) => {
+      const { x, y } = local(e)
+      moveTo(d.index, x, y, e.altKey)
+    },
+    hover: (e) => {
+      const { x, y } = local(e)
+      const h = hit(x, y)
+      setHover(h >= 0 ? h : null)
+    },
+  })
+
   return (
     <canvas
       ref={canvasRef}
       className="env-canvas"
       style={{ width, height: HEIGHT }}
-      onPointerDown={(e) => {
-        if (e.button !== 0) return
-        const { x, y } = local(e)
-        let index = hit(x, y)
-        if (index < 0) {
-          const bar = snap(scale.toBar(x), e.altKey)
-          const before = [...points].reverse().find((p) => p.bar < bar)
-          const added: Breakpoint = { bar, value: valueOf(y), shape: before?.shape ?? 'linear' }
-          const next = [...points.filter((p) => p.bar !== bar), added].sort((a, b) => a.bar - b.bar)
-          index = next.indexOf(added)
-          onChange({ points: next })
-        }
-        drag.current = { index }
-        e.currentTarget.setPointerCapture(e.pointerId)
-      }}
-      onPointerMove={(e) => {
-        const { x, y } = local(e)
-        const d = drag.current
-        if (d && released(e)) drag.current = null
-        else if (d) moveTo(d.index, x, y, e.altKey)
-        else {
-          const h = hit(x, y)
-          setHover(h >= 0 ? h : null)
-        }
-      }}
-      onPointerUp={(e) => {
-        drag.current = null
-        e.currentTarget.releasePointerCapture(e.pointerId)
-      }}
+      {...drag}
       onPointerLeave={() => setHover(null)}
       onDoubleClick={(e) => {
         const { x, y } = local(e)
