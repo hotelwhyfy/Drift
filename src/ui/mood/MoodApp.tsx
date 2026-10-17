@@ -3,7 +3,7 @@ import { Opening } from '@/ui/mood/Opening.tsx'
 import { Listening } from '@/ui/mood/Listening.tsx'
 import { Dial } from '@/ui/Dial.tsx'
 import { RackView } from '@/ui/RackView.tsx'
-import { Player } from '@/audio/player.ts'
+import { usePlayer } from '@/ui/hooks/usePlayer.ts'
 import { accentFor } from '@/ui/accent.ts'
 import { choosePrompt } from '@/mood/prompts.ts'
 import type { Prompt } from '@/mood/prompts.ts'
@@ -15,7 +15,7 @@ import { Journey } from '@/mood/journey.ts'
 import { MACRO_INFO, DEFAULT_MACROS } from '@/macros/macros.ts'
 import type { Macros, MacroKey } from '@/macros/macros.ts'
 import { buildPatch, expressionFor, modeNameAt } from '@/macros/patch.ts'
-import type { SlotDesc, EngineSnapshot } from '@/engine/types.ts'
+import type { SlotDesc } from '@/engine/types.ts'
 import { Tooltip } from '@/ui/Tooltip.tsx'
 
 type Phase = 'opening' | 'playing'
@@ -30,24 +30,12 @@ export function MoodApp() {
   const [arrangement, setArrangement] = useState<Arrangement | null>(null)
   const [macros, setMacros] = useState<Macros>(DEFAULT_MACROS)
   const [slots, setSlots] = useState<SlotDesc[]>([])
-  const [playing, setPlaying] = useState(false)
-  const [snapshot, setSnapshot] = useState<EngineSnapshot | null>(null)
   const [deskOpen, setDeskOpen] = useState(false)
   const [progress, setProgress] = useState(0)
   const [steering, setSteering] = useState(false)
 
-  const playerRef = useRef<Player | null>(null)
+  const { player, playing, snapshot } = usePlayer(DEFAULT_MACROS, 1)
   const journeyRef = useRef<Journey | null>(null)
-
-  if (playerRef.current === null) {
-    playerRef.current = new Player(DEFAULT_MACROS, 1, {
-      onSnapshot: setSnapshot,
-      onStateChange: setPlaying,
-    })
-  }
-  const player = playerRef.current
-
-  useEffect(() => () => player.dispose(), [player])
 
   const accent = accentFor(macros.colour)
   // Read the real tempo from the patch rather than re-deriving it here, so the

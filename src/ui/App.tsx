@@ -4,7 +4,6 @@ import { Visualizer } from '@/ui/Visualizer.tsx'
 import { Dials } from '@/ui/Dials.tsx'
 import { FileActions } from '@/ui/FileActions.tsx'
 import { CaptureControls } from '@/ui/CaptureControls.tsx'
-import { Player } from '@/audio/player.ts'
 import { SCENES } from '@/macros/macros.ts'
 import type { Macros, MacroKey } from '@/macros/macros.ts'
 import { buildPatch, expressionFor } from '@/macros/patch.ts'
@@ -33,22 +32,22 @@ import { useCapture } from '@/ui/hooks/useCapture.ts'
 import type { CaptureLength } from '@/ui/hooks/useCapture.ts'
 import { useFileDrop } from '@/ui/hooks/useFileDrop.ts'
 import { useShortcuts } from '@/ui/hooks/useShortcuts.ts'
+import { usePlayer } from '@/ui/hooks/usePlayer.ts'
+import { usePlayerSync } from '@/ui/hooks/usePlayerSync.ts'
 
 export function App() {
   const initial = useMemo(loadSession, [])
   const [macros, setMacros] = useState<Macros>(initial.macros)
   const [seedName, setSeedName] = useState(initial.seedName)
   const [slots, setSlots] = useState<SlotDesc[]>(initial.slots)
-  const [playing, setPlaying] = useState(false)
-  const [snapshot, setSnapshot] = useState<EngineSnapshot | null>(null)
-  const [captureProgress, setCaptureProgress] = useState<number | null>(null)
+  const { player, playing, snapshot, clearSnapshot, captureProgress, setCaptureProgress } =
+    usePlayer(initial.macros, deriveSeed(initial.seedName))
   const [captureLength, setCaptureLength] = useState<CaptureLength>('song')
   const [song, setSong] = useState<Song>(initial.song)
   /** Where playback starts from, and where the playhead rests when stopped. */
   const [cursor, setCursor] = useState(0)
   const [projectName, setProjectName] = useState(initial.projectName)
   const { notice, say } = useNotice()
-  const playerRef = useRef<Player | null>(null)
 
   const playhead = playing && snapshot ? snapshot.bar + snapshot.barPhase : cursor
   /** The dials as the music has them at the playhead: the song's where it drives them. */
@@ -66,39 +65,7 @@ export function App() {
     return { mode: s.mode.name, root: s.rootMidi }
   }, [playing, snapshot, patch, song, cursor])
 
-  // One Player for the life of the page. Recreating it would rebuild the
-  // AudioContext, and browsers limit how many of those a page may have.
-  if (playerRef.current === null) {
-    playerRef.current = new Player(initial.macros, deriveSeed(initial.seedName), {
-      onSnapshot: setSnapshot,
-      onStateChange: setPlaying,
-      onCaptureProgress: (p) => setCaptureProgress(p),
-    })
-  }
-  const player = playerRef.current
-
-  useEffect(() => () => player.dispose(), [player])
-
-  // Dev-only diagnostic handle. The queue depth is exactly how long a mute or
-  // level change takes to be heard, and it is worth being able to measure
-  // rather than infer.
-  useEffect(() => {
-    if (!import.meta.env.DEV) return
-    Reflect.set(window, '__drift', player)
-    return () => { Reflect.deleteProperty(window, '__drift') }
-  }, [player])
-
-  useEffect(() => {
-    player.setMacros(macros)
-  }, [macros, player])
-
-  useEffect(() => {
-    player.setRack(slots)
-  }, [slots, player])
-
-  useEffect(() => {
-    player.setSong(song)
-  }, [song, player])
+  usePlayerSync(player, macros, slots, song)
 
   // A song that stopped by itself goes back to the top, ready to play again.
   const lastSnapshot = useRef<EngineSnapshot | null>(null)
@@ -162,7 +129,7 @@ export function App() {
     } else {
       // Until audio from the new start is heard, the playhead sits on the
       // cursor rather than wherever the last snapshot left it.
-      setSnapshot(null)
+      clearSnapshot()
       void player.play(Math.floor(cursor))
     }
   }, [player, snapshot, cursor])
@@ -170,7 +137,7 @@ export function App() {
   const seek = useCallback((bar: number) => {
     setCursor(bar)
     if (player.isPlaying) {
-      setSnapshot(null)
+      clearSnapshot()
       player.seek(bar)
     }
   }, [player])
@@ -199,7 +166,7 @@ export function App() {
     setSeedName(next.seedName)
     setProjectName(next.projectName)
     if (player.isPlaying) {
-      setSnapshot(null)
+      clearSnapshot()
       player.seek(0)
     }
     player.reseed(deriveSeed(next.seedName))
