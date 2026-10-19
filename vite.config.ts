@@ -10,11 +10,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        // The prototype, untouched.
         main: resolve(import.meta.dirname, 'index.html'),
-        // The mood version: one question, then it plays. Shares the whole
-        // engine; adds only src/mood and src/ui/mood.
-        mood: resolve(import.meta.dirname, 'mood.html'),
       },
     },
   },
