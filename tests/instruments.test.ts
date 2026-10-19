@@ -18,7 +18,9 @@ describe('every instrument', () => {
       expression: { ...NEUTRAL }, follow: 1, lanes: [], knobs: {},
     }])
     e.seek(0)
-    const n = SR * 8
+    // Long enough for a chance-based part to have been given several chances:
+    // an arp with a coin per two-bar window is silent for 8 s one time in two.
+    const n = SR * 30
     const l = new Float32Array(n)
     const r = new Float32Array(n)
     e.render(l, r, n)
@@ -29,5 +31,5 @@ describe('every instrument', () => {
     }
     const rmsDb = 20 * Math.log10(Math.sqrt(energy / (n * 2)))
     expect(rmsDb).toBeGreaterThan(-45)
-  })
+  }, 30_000)
 })

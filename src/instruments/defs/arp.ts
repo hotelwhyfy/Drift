@@ -3,6 +3,7 @@ import type { NoteIntent } from '@/harmony/types.ts'
 import { beatStrength } from '@/harmony/resolver.ts'
 import { Pluck } from '@/voices/pluck.ts'
 import { lerp, clamp01 } from '@/core/curves.ts'
+import { spread } from '@/instruments/spread.ts'
 
 const ARP_DIRECTIONS = ['Up', 'Down', 'Up-down', 'Random']
 const ARP_RATES = ['Quarters', 'Eighths', 'Sixteenths']
@@ -110,7 +111,9 @@ export const arp: InstrumentDef = {
     const run = ctx.phraseRng('run', bars, window)
     // Every value is drawn whether or not it is used, so turning one knob
     // never reshuffles the decisions the others lead to.
-    const plays = run() < clamp01(ctx.params.chance ?? 0.5)
+    // Spread rather than flipped, so a run is followed by a rest more often
+    // than independent coins would manage; the rate is still `chance`.
+    const plays = spread(ctx.phraseRng('spread-phase')(), window, run()) < clamp01(ctx.params.chance ?? 0.5)
     const startRoll = run()
     const turnRoll = run()
     const turnTo = Math.floor(run() * ARP_DIRECTIONS.length)

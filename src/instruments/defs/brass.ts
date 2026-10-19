@@ -2,6 +2,7 @@ import type { InstrumentDef } from '@/instruments/types.ts'
 import type { NoteIntent } from '@/harmony/types.ts'
 import { Brass } from '@/voices/brass.ts'
 import { lerp, clamp01 } from '@/core/curves.ts'
+import { spread } from '@/instruments/spread.ts'
 
 export const brass: InstrumentDef = {
   id: 'brass',
@@ -67,7 +68,10 @@ export const brass: InstrumentDef = {
     const roll = ctx.rng()
     const start = ctx.rng()
     const span = ctx.rng()
-    if (roll >= clamp01(ctx.params.swells ?? 0.6)) return []
+    // Spread rather than flipped, so one swell is followed by a rest more
+    // often than independent coins would manage.
+    const phase = ctx.phraseRng('spread-phase')()
+    if (spread(phase, ctx.bar, roll) >= clamp01(ctx.params.swells ?? 0.6)) return []
     // A swell comes in on the downbeat or the third beat, and holds into the
     // next bar or two: the shape is a breath, not a stab.
     const step = start < 0.65 ? 0 : 8

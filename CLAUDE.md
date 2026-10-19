@@ -61,6 +61,40 @@ returns a value; none of it holds state.
   Worker and in bare Node, which is what makes the tests and `npm run audition`
   possible.
 
+### Chance-based parts
+
+A part that plays "now and then" must not decide with an independent coin
+(`rng() < chance`). Independent flips cluster: at 0.5, one streak in four is
+three or more hits, followed by a silence as long as the streak was. It reads
+as bursts and absences, not as a part with room in it.
+
+Use `spread` from `src/instruments/spread.ts` instead:
+
+```ts
+const phase = ctx.phraseRng('spread-phase')()
+const plays = spread(phase, index, ctx.rng()) < chance
+```
+
+- `index` is the slot's musical coordinate: the window, the bar, or
+  `bar * steps + k` for the k-th candidate step. Never a counter that depends
+  on what was played before it.
+- The draw you were already taking becomes the jitter, so the draw order, and
+  every other decision in the pattern, is unchanged.
+- The value is still uniform, so the long-run rate is exactly `chance`;
+  `chance: 1` still always plays. What changes is the spacing.
+- It is a pure function of the coordinate, so a seek lands on the same
+  decision playback would have made. Do not replace it with "don't play if the
+  last bar did": that needs state, and a seeked bar has no history.
+
+Arp (per window), glass (per step) and brass (per bar) use it. Wind and rhodes
+do not, being sparse enough that streaks are rare; cymbals avoid streaks by
+construction. A new instrument with a chance knob should use it unless it has
+a reason not to, and say so in a comment.
+
+Chance parts are silent for stretches by design, so a test that asks whether
+one is audible must render long enough for several chances. `tests/instruments.test.ts`
+renders 30 s for this reason.
+
 ## Audio code
 
 - Per-sample loops use indexed `for`. A `forEach` over a Float32Array runs

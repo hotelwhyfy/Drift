@@ -2,6 +2,10 @@ import type { InstrumentDef } from '@/instruments/types.ts'
 import type { NoteIntent } from '@/harmony/types.ts'
 import { Keys } from '@/voices/keys.ts'
 import { lerp, clamp01 } from '@/core/curves.ts'
+import { spread } from '@/instruments/spread.ts'
+
+/** The steps a bell may land on, weighted to the spaces between the strong beats. */
+const STEPS = [2, 6, 7, 10, 14, 15] as const
 
 /**
  * A second pitched instrument built entirely from pieces the Rhodes already uses, to show
@@ -59,8 +63,11 @@ export const glass: InstrumentDef = {
     // to the spaces between the strong beats.
     const chance = clamp01(ctx.params.chance ?? 0.2)
     // Each step rolls, then draws its note's fields, before the next step rolls.
-    return [2, 6, 7, 10, 14, 15].flatMap((step): NoteIntent[] => {
-      if (!(ctx.rng() < chance * 0.5)) return []
+    const phase = ctx.phraseRng('spread-phase')()
+    return STEPS.flatMap((step, k): NoteIntent[] => {
+      // Spread rather than flipped: bells land evenly instead of in a burst
+      // and then a long silence. The roll is still drawn, as the jitter.
+      if (!(spread(phase, ctx.bar * STEPS.length + k, ctx.rng()) < chance * 0.5)) return []
       return [{
         role: 'colour',
         contour: -0.2 + ctx.rng() * 1.2,
