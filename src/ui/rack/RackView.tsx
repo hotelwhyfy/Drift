@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { SlotDesc, SlotReadout } from '@/engine/types.ts'
 import { instrumentById } from '@/instruments/registry.ts'
-import { SlotRow } from '@/ui/SlotRow.tsx'
-import { InstrumentPicker } from '@/ui/InstrumentPicker.tsx'
+import { SlotRow } from '@/ui/rack/SlotRow.tsx'
+import { InstrumentPicker } from '@/ui/rack/InstrumentPicker.tsx'
 import type { Expression } from '@/fuzzy/expression.ts'
 
 interface Props {

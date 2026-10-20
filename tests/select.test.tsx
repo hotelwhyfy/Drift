@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react'
-import { Select } from '@/ui/Select.tsx'
+import { Select } from '@/ui/controls/Select.tsx'
 import type { SelectItem } from '@/ui/types.ts'
 
 beforeAll(() => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { LaneEditor } from '@/ui/LaneEditor.tsx'
+import { LaneEditor } from '@/ui/rack/LaneEditor.tsx'
 import { makeLane } from '@/automation/lane.ts'
 import { instrumentById } from '@/instruments/registry.ts'
 import type { Lane } from '@/automation/lane.ts'

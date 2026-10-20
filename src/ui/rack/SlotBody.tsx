@@ -1,16 +1,16 @@
 import type { SlotDesc, SlotReadout } from '@/engine/types.ts'
 import type { InstrumentDef } from '@/instruments/types.ts'
-import { XYPad } from '@/ui/XYPad.tsx'
-import { WordField } from '@/ui/WordField.tsx'
-import { LaneEditor } from '@/ui/LaneEditor.tsx'
-import { KnobPanel } from '@/ui/KnobPanel.tsx'
-import { FiringRules } from '@/ui/FiringRules.tsx'
+import { XYPad } from '@/ui/controls/XYPad.tsx'
+import { WordField } from '@/ui/controls/WordField.tsx'
+import { LaneEditor } from '@/ui/rack/LaneEditor.tsx'
+import { KnobPanel } from '@/ui/rack/KnobPanel.tsx'
+import { FiringRules } from '@/ui/rack/FiringRules.tsx'
 import { makeLane } from '@/automation/lane.ts'
 import type { Lane } from '@/automation/lane.ts'
 import type { Expression, ExpressionKey } from '@/fuzzy/expression.ts'
 import { EXPRESSION_INFO, blendExpression } from '@/fuzzy/expression.ts'
-import { automationColour } from '@/ui/automationColour.ts'
-import { explainerFor } from '@/ui/explainerFor.ts'
+import { automationColour } from '@/ui/rack/automationColour.ts'
+import { explainerFor } from '@/ui/rack/explainerFor.ts'
 
 interface Props {
   slot: SlotDesc

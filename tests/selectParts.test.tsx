@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { findTypeahead } from '@/ui/findTypeahead.ts'
-import { placePopup } from '@/ui/placePopup.ts'
+import { findTypeahead } from '@/ui/controls/findTypeahead.ts'
+import { placePopup } from '@/ui/controls/placePopup.ts'
 import { useTypeahead } from '@/ui/hooks/useTypeahead.ts'
 import { usePopupPosition } from '@/ui/hooks/usePopupPosition.ts'
 

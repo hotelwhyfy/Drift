@@ -1,9 +1,9 @@
-import { Dial } from '@/ui/Dial.tsx'
-import { Tooltip } from '@/ui/Tooltip.tsx'
+import { Dial } from '@/ui/controls/Dial.tsx'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
 import { MACRO_INFO } from '@/macros/macros.ts'
 import type { Macros, MacroKey } from '@/macros/macros.ts'
 import type { Song } from '@/song/types.ts'
-import { MACRO_COLOURS } from '@/ui/laneColours.ts'
+import { MACRO_COLOURS } from '@/ui/colour/laneColours.ts'
 
 interface Props {
   song: Song

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { UndoHistory } from '@/ui/undoHistory.ts'
+import { UndoHistory } from '@/ui/session/undoHistory.ts'
 
 describe('UndoHistory', () => {
   it('walks back and forward through recorded states', () => {

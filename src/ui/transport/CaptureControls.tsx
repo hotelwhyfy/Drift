@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Tooltip } from '@/ui/Tooltip.tsx'
-import { MAX_CAPTURE_MINUTES, parseMinutes } from '@/ui/parseMinutes.ts'
-import { formatDuration } from '@/ui/formatDuration.ts'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
+import { MAX_CAPTURE_MINUTES, parseMinutes } from '@/ui/transport/parseMinutes.ts'
+import { formatDuration } from '@/ui/common/formatDuration.ts'
 import type { CaptureLength } from '@/ui/hooks/useCapture.ts'
 
 const CAPTURE_LENGTHS = [1, 3, 10, 30]

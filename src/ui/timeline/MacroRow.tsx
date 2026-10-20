@@ -1,9 +1,9 @@
 import type { MacroInfo } from '@/macros/macros.ts'
 import type { MacroTrack } from '@/song/types.ts'
-import type { BarScale } from '@/ui/barScale.ts'
-import { EnvelopeLane } from '@/ui/EnvelopeLane.tsx'
-import { MACRO_COLOURS } from '@/ui/laneColours.ts'
-import { Tooltip } from '@/ui/Tooltip.tsx'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { EnvelopeLane } from '@/ui/timeline/EnvelopeLane.tsx'
+import { MACRO_COLOURS } from '@/ui/colour/laneColours.ts'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
 
 interface Props {
   info: MacroInfo

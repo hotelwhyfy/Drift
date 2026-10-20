@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { Envelope, Breakpoint } from '@/song/types.ts'
 import { BREAKPOINT_SHAPES } from '@/song/song.ts'
 import { sampleEnvelope } from '@/song/sampleEnvelope.ts'
-import type { BarScale } from '@/ui/barScale.ts'
-import { gridStep } from '@/ui/gridStep.ts'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { gridStep } from '@/ui/timeline/gridStep.ts'
 import { usePointerDrag } from '@/ui/hooks/usePointerDrag.ts'
-import { canvasScale } from '@/ui/canvasScale.ts'
+import { canvasScale } from '@/ui/common/canvasScale.ts'
 
 interface Props {
   envelope: Envelope

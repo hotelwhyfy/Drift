@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
-import { loadSession, SESSION_STORAGE_KEY } from '@/ui/loadSession.ts'
+import { loadSession, SESSION_STORAGE_KEY } from '@/ui/session/loadSession.ts'
 import { generateDrift } from '@/generate/generateDrift.ts'
 
 afterEach(() => localStorage.clear())

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Session } from '@/ui/types.ts'
 import { writeProject } from '@/project/project.ts'
-import { SESSION_STORAGE_KEY } from '@/ui/loadSession.ts'
+import { SESSION_STORAGE_KEY } from '@/ui/session/loadSession.ts'
 
 /** Keeps the session in localStorage, debounced. */
 export function useAutosave(session: Session): void {

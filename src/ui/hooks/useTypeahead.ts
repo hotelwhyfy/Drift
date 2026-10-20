@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { findTypeahead } from '@/ui/findTypeahead.ts'
+import { findTypeahead } from '@/ui/controls/findTypeahead.ts'
 
 /** Keys typed closer together than this build one search; further apart, a new one. */
 const TYPEAHEAD_MS = 600

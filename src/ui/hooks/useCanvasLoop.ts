@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { DependencyList, RefObject } from 'react'
-import { canvasScale } from '@/ui/canvasScale.ts'
+import { canvasScale } from '@/ui/common/canvasScale.ts'
 
 /** Draws one frame onto a canvas that has just been cleared, `width` by `height` CSS pixels. */
 export type CanvasFrame = (width: number, height: number) => void

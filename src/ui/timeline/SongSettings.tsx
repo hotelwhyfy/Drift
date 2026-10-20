@@ -6,9 +6,9 @@ import { songSeconds } from '@/song/songSeconds.ts'
 import { MAX_SONG_BARS, MIN_TUNING, MAX_TUNING } from '@/song/song.ts'
 import { withLength } from '@/song/withLength.ts'
 import { withTuning } from '@/song/withTuning.ts'
-import { formatDuration } from '@/ui/formatDuration.ts'
-import { Tooltip } from '@/ui/Tooltip.tsx'
-import { NumberField } from '@/ui/NumberField.tsx'
+import { formatDuration } from '@/ui/common/formatDuration.ts'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
+import { NumberField } from '@/ui/controls/NumberField.tsx'
 
 const ENDS: SongEnd[] = ['loop', 'hold', 'stop']
 

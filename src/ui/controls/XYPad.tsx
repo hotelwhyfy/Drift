@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import type { ExpressionKey } from '@/fuzzy/expression.ts'
 import { EXPRESSION_INFO } from '@/fuzzy/expression.ts'
 import { usePointerDrag } from '@/ui/hooks/usePointerDrag.ts'
-import { Select } from '@/ui/Select.tsx'
+import { Select } from '@/ui/controls/Select.tsx'
 import type { SelectOption } from '@/ui/types.ts'
 
 interface Props {

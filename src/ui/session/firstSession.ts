@@ -1,6 +1,6 @@
 import type { Session } from '@/ui/types.ts'
 import { generateDrift } from '@/generate/generateDrift.ts'
-import { randomSeedName } from '@/ui/randomSeedName.ts'
+import { randomSeedName } from '@/ui/session/randomSeedName.ts'
 
 /**
  * What a first launch opens on: a generated drift, like the generate button

@@ -1,14 +1,14 @@
-import { Dial } from '@/ui/Dial.tsx'
+import { Dial } from '@/ui/controls/Dial.tsx'
 import type { ControlSpec, InstrumentDef } from '@/instruments/types.ts'
 import { controlsOf } from '@/instruments/controlsOf.ts'
 import { paramSpecOf } from '@/instruments/paramSpecOf.ts'
 import { denormaliseParam } from '@/fuzzy/denormaliseParam.ts'
-import { Tooltip } from '@/ui/Tooltip.tsx'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
 import type { Lane } from '@/automation/lane.ts'
 import { songLaneFor } from '@/automation/songLaneFor.ts'
 import { drivenValue } from '@/automation/drivenValue.ts'
 import { recordInto } from '@/automation/recordInto.ts'
-import { automationColour } from '@/ui/automationColour.ts'
+import { automationColour } from '@/ui/rack/automationColour.ts'
 
 interface Props {
   def: InstrumentDef

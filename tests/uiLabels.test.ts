@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { formatDuration } from '@/ui/formatDuration.ts'
-import { targetLabel } from '@/ui/targetLabel.ts'
+import { formatDuration } from '@/ui/common/formatDuration.ts'
+import { targetLabel } from '@/ui/timeline/targetLabel.ts'
 import { makeLane } from '@/automation/lane.ts'
 import type { SlotDesc } from '@/engine/types.ts'
 import { NEUTRAL } from '@/fuzzy/expression.ts'

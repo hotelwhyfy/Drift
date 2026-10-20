@@ -6,11 +6,11 @@ import type { Point } from '@/automation/curve.ts'
 import { EXPRESSION_INFO, EXPRESSION_KEYS } from '@/fuzzy/expression.ts'
 import type { InstrumentDef } from '@/instruments/types.ts'
 import { controlsOf } from '@/instruments/controlsOf.ts'
-import { released } from '@/ui/released.ts'
-import { Select } from '@/ui/Select.tsx'
-import { NumberField } from '@/ui/NumberField.tsx'
+import { released } from '@/ui/common/released.ts'
+import { Select } from '@/ui/controls/Select.tsx'
+import { NumberField } from '@/ui/controls/NumberField.tsx'
 import type { SelectOption } from '@/ui/types.ts'
-import { canvasScale } from '@/ui/canvasScale.ts'
+import { canvasScale } from '@/ui/common/canvasScale.ts'
 
 /** Follow lanes can't be made here, only kept: one is listed only while the lane is one. */
 const sourceOptions = (following: boolean): SelectOption<LaneSource['kind']>[] => {

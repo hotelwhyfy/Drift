@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useAccent } from '@/ui/hooks/useAccent.ts'
-import { accentFor } from '@/ui/accent.ts'
+import { accentFor } from '@/ui/colour/accent.ts'
 
 const published = (): string => document.documentElement.style.getPropertyValue('--accent')
 

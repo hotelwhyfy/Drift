@@ -5,7 +5,7 @@ import { usePlayerSync } from '@/ui/hooks/usePlayerSync.ts'
 import { Player } from '@/audio/player.ts'
 import { DEFAULT_MACROS } from '@/macros/macros.ts'
 import { DEFAULT_SONG } from '@/song/song.ts'
-import { defaultSlots } from '@/ui/defaultSlots.ts'
+import { defaultSlots } from '@/ui/rack/defaultSlots.ts'
 
 function setup() {
   // Before audio starts, a Player only remembers what it is told.

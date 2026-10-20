@@ -4,7 +4,7 @@ import { render, cleanup } from '@testing-library/react'
 import type { DependencyList } from 'react'
 import { useCanvasLoop } from '@/ui/hooks/useCanvasLoop.ts'
 import type { CanvasFrame } from '@/ui/hooks/useCanvasLoop.ts'
-import { canvasScale } from '@/ui/canvasScale.ts'
+import { canvasScale } from '@/ui/common/canvasScale.ts'
 
 /** A 2D context that only records the two calls the hook itself makes. */
 function fakeContext() {

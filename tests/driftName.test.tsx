@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { DriftName } from '@/ui/DriftName.tsx'
+import { DriftName } from '@/ui/header/DriftName.tsx'
 
 afterEach(cleanup)
 

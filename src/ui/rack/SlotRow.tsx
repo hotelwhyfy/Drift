@@ -3,13 +3,13 @@ import type { CSSProperties } from 'react'
 import type { SlotDesc, SlotReadout } from '@/engine/types.ts'
 import type { InstrumentDef } from '@/instruments/types.ts'
 import type { Expression, ExpressionKey } from '@/fuzzy/expression.ts'
-import { SlotBody } from '@/ui/SlotBody.tsx'
-import { Tooltip } from '@/ui/Tooltip.tsx'
+import { SlotBody } from '@/ui/rack/SlotBody.tsx'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
 import { songLaneFor } from '@/automation/songLaneFor.ts'
 import { drivenValue } from '@/automation/drivenValue.ts'
 import { recordInto } from '@/automation/recordInto.ts'
-import { automationColour } from '@/ui/automationColour.ts'
-import { meterPosition } from '@/ui/meterPosition.ts'
+import { automationColour } from '@/ui/rack/automationColour.ts'
+import { meterPosition } from '@/ui/rack/meterPosition.ts'
 
 interface Props {
   slot: SlotDesc

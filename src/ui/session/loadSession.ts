@@ -1,7 +1,7 @@
 import type { Session } from '@/ui/types.ts'
 import { readProject } from '@/project/project.ts'
-import { firstSession } from '@/ui/firstSession.ts'
-import { defaultSlots } from '@/ui/defaultSlots.ts'
+import { firstSession } from '@/ui/session/firstSession.ts'
+import { defaultSlots } from '@/ui/rack/defaultSlots.ts'
 
 export const SESSION_STORAGE_KEY = 'drift.state.v1'
 

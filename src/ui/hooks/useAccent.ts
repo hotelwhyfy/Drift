@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { accentFor } from '@/ui/accent.ts'
+import { accentFor } from '@/ui/colour/accent.ts'
 
 /**
  * The accent colour for a Colour dial value, also published as the page's

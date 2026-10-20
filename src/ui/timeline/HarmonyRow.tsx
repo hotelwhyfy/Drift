@@ -3,10 +3,10 @@ import type { Song, HarmonySection } from '@/song/types.ts'
 import { PROGRESSION_STYLES, EXTENSIONS, CHORD_BAR_CHOICES, autoSection } from '@/song/song.ts'
 import { MODES, NOTE_NAMES } from '@/core/theory.ts'
 import type { Mode } from '@/core/theory.ts'
-import type { BarScale } from '@/ui/barScale.ts'
-import { romanNumeral } from '@/ui/romanNumeral.ts'
-import { Tooltip } from '@/ui/Tooltip.tsx'
-import { released } from '@/ui/released.ts'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { romanNumeral } from '@/ui/timeline/romanNumeral.ts'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
+import { released } from '@/ui/common/released.ts'
 
 interface Props {
   song: Song

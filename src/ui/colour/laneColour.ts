@@ -1,4 +1,4 @@
-import { INSTRUMENT_LANE_COLOURS } from '@/ui/laneColours.ts'
+import { INSTRUMENT_LANE_COLOURS } from '@/ui/colour/laneColours.ts'
 import { deriveSeed } from '@/core/rng.ts'
 
 /** An instrument lane's colour, keyed by its id so removing one never repaints the others. */

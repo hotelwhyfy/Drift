@@ -1,11 +1,11 @@
 import type { SlotDesc } from '@/engine/types.ts'
 import type { SongLane } from '@/automation/songLaneFor.ts'
 import { laneActs } from '@/automation/laneActs.ts'
-import type { BarScale } from '@/ui/barScale.ts'
-import { EnvelopeLane } from '@/ui/EnvelopeLane.tsx'
-import { laneColour } from '@/ui/laneColour.ts'
-import { targetLabel } from '@/ui/targetLabel.ts'
-import { Tooltip } from '@/ui/Tooltip.tsx'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { EnvelopeLane } from '@/ui/timeline/EnvelopeLane.tsx'
+import { laneColour } from '@/ui/colour/laneColour.ts'
+import { targetLabel } from '@/ui/timeline/targetLabel.ts'
+import { Tooltip } from '@/ui/controls/Tooltip.tsx'
 
 interface Props {
   slot: SlotDesc

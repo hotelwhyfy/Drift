@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SongEnd } from '@/song/types.ts'
 import { MAX_SONG_BARS } from '@/song/song.ts'
-import type { BarScale } from '@/ui/barScale.ts'
-import { released } from '@/ui/released.ts'
-import { drawRuler, RULER_HEIGHT } from '@/ui/drawRuler.ts'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { released } from '@/ui/common/released.ts'
+import { drawRuler, RULER_HEIGHT } from '@/ui/timeline/drawRuler.ts'
 
 interface Props {
   scale: BarScale

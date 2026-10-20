@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { barScale } from '@/ui/barScale.ts'
-import type { BarScale } from '@/ui/barScale.ts'
+import { barScale } from '@/ui/timeline/barScale.ts'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
 
 const MIN_PX = 1
 const MAX_PX = 96

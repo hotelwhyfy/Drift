@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@/ui/types.ts'
-import { UndoHistory } from '@/ui/undoHistory.ts'
-import { released } from '@/ui/released.ts'
-import { samePiece } from '@/ui/samePiece.ts'
+import { UndoHistory } from '@/ui/session/undoHistory.ts'
+import { released } from '@/ui/common/released.ts'
+import { samePiece } from '@/ui/session/samePiece.ts'
 
 /** How long the document must sit still before it counts as one undoable step. */
 const SETTLE_MS = 400

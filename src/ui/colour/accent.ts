@@ -1,8 +1,4 @@
-/**
- * Accent colour from the Colour macro.
- *
- * Shared by the prototype and the mood version.
- */
+/** Accent colour from the Colour macro. */
 export function accentFor(colour: number): string {
   // Around the warm side of the wheel — indigo, violet, rose, amber. The direct
   // route from indigo to amber runs through green, which reads as clinical.

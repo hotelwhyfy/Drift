@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { placePopup } from '@/ui/placePopup.ts'
-import type { PopupPosition } from '@/ui/placePopup.ts'
+import { placePopup } from '@/ui/controls/placePopup.ts'
+import type { PopupPosition } from '@/ui/controls/placePopup.ts'
 
 export interface PopupAnchor {
   triggerRef: RefObject<HTMLButtonElement | null>

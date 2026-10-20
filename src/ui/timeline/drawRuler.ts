@@ -1,6 +1,6 @@
-import type { BarScale } from '@/ui/barScale.ts'
-import { gridStep } from '@/ui/gridStep.ts'
-import { canvasScale } from '@/ui/canvasScale.ts'
+import type { BarScale } from '@/ui/timeline/barScale.ts'
+import { gridStep } from '@/ui/timeline/gridStep.ts'
+import { canvasScale } from '@/ui/common/canvasScale.ts'
 
 export const RULER_HEIGHT = 24
 

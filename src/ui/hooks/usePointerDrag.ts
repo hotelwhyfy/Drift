@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import type { PointerEvent } from 'react'
-import { released } from '@/ui/released.ts'
+import { released } from '@/ui/common/released.ts'
 
 export interface PointerDrag<T, E extends Element> {
   /** A press on the control. Return what the drag needs to remember, or null to ignore the press. */

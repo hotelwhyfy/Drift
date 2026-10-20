@@ -2,10 +2,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { useState } from 'react'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { Dial } from '@/ui/Dial.tsx'
-import { XYPad } from '@/ui/XYPad.tsx'
-import { EnvelopeLane } from '@/ui/EnvelopeLane.tsx'
-import { barScale } from '@/ui/barScale.ts'
+import { Dial } from '@/ui/controls/Dial.tsx'
+import { XYPad } from '@/ui/controls/XYPad.tsx'
+import { EnvelopeLane } from '@/ui/timeline/EnvelopeLane.tsx'
+import { barScale } from '@/ui/timeline/barScale.ts'
 import type { Envelope, Breakpoint } from '@/song/types.ts'
 
 beforeAll(() => {
