@@ -806,14 +806,14 @@ input[type="range"]::-webkit-slider-thumb {
 .head-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 
 /*
- * The drift's name, editable in place. The input and a hidden copy of its
+ * The project's name, editable in place. The input and a hidden copy of its
  * text share one grid cell: the copy sets the width, so the field is as wide
  * as the name, up to a cap where it ellipsizes.
  */
-.drift-name { display: grid; max-width: 14em; min-width: 0; }
+.project-name { display: grid; max-width: 14em; min-width: 0; }
 
-.drift-name-mirror,
-.drift-name-input {
+.project-name-mirror,
+.project-name-input {
   grid-area: 1 / 1;
   font: inherit;
   font-size: 13px;
@@ -821,14 +821,14 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 1px 4px 1px 0;
 }
 
-.drift-name-mirror {
+.project-name-mirror {
   visibility: hidden;
   white-space: pre;
   overflow: hidden;
   min-width: 3em;
 }
 
-.drift-name-input {
+.project-name-input {
   /* Zero, then stretched: an input's default width (about 20 characters)
      would otherwise count towards the column and keep it from shrinking. */
   width: 0;
@@ -841,17 +841,9 @@ input[type="range"]::-webkit-slider-thumb {
   text-overflow: ellipsis;
 }
 
-.drift-name-input:hover { border-bottom-color: #ffffff14; }
-.drift-name-input:focus { border-bottom-color: var(--accent); }
+.project-name-input:hover { border-bottom-color: #ffffff14; }
+.project-name-input:focus { border-bottom-color: var(--accent); }
 
-.head-file {
-  font-size: 11px;
-  color: var(--ink-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
 
 .file-actions { display: flex; gap: 1px; margin-left: 5px; }
 

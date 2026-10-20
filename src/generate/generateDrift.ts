@@ -15,8 +15,9 @@ import type { Rng } from '@/core/rng.ts'
  * A brand-new drift from nothing but a seed name: the dials, who is in the
  * room, their character, and a song that goes somewhere.
  *
- * Everything derives from the name, notes included, so a drift worth keeping
- * can be had back by typing its name into the header.
+ * Everything derives from the name, notes included: the same name always
+ * gives the same drift, which is what makes a saved project's baseline
+ * reproducible.
  */
 export interface GeneratedDrift {
   readonly macros: Macros

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DriftName } from '@/ui/header/DriftName.tsx'
+import { ProjectName } from '@/ui/header/ProjectName.tsx'
 import { Visualizer } from '@/ui/Visualizer.tsx'
 import { Dials } from '@/ui/Dials.tsx'
 import { FileActions } from '@/ui/header/FileActions.tsx'
@@ -162,18 +162,16 @@ export function App() {
   }, [player, history.beforeReplace])
 
   /**
-   * The drift a name gives: its seed, dials, rack and song. It replaces the
-   * work on screen, which the autosave would then overwrite, so the notice
-   * offers it back rather than asking first — a confirmation on every press
-   * would make generating several in a row a chore.
+   * A brand-new drift under a random name: seed, dials, rack and song. It
+   * replaces the work on screen, which the autosave would then overwrite, so
+   * the notice offers it back rather than asking first — a confirmation on
+   * every press would make generating several in a row a chore.
    */
-  const generateFrom = useCallback((name: string) => {
+  const generate = useCallback(() => {
+    const name = randomSeedName()
     applySession({ ...generateDrift(name), seedName: name, projectName: name })
     say(`generated ${name}`, session)
   }, [session, applySession, say])
-
-  /** A brand-new drift under a random name. */
-  const generate = useCallback(() => generateFrom(randomSeedName()), [generateFrom])
 
   const undoGenerate = useCallback(() => {
     const previous = notice?.undo
@@ -198,11 +196,7 @@ export function App() {
       <header className={`head ${compact ? 'compact' : ''}`} ref={headRef}>
         <div className="head-title">
           <h1>drift</h1>
-          <DriftName value={seedName} onCommit={generateFrom} />
-          {/* Saved or opened under a name of its own: show that too. */}
-          {projectName !== seedName && projectName !== 'untitled' && (
-            <span className="head-file">{projectName}</span>
-          )}
+          <ProjectName value={projectName} seed={seedName} onRename={setProjectName} />
         </div>
         <div className="state">
           <span className="mode">{NOTE_NAMES[harmonyNow.root % 12]} {harmonyNow.mode}</span>

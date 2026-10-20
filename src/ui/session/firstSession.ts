@@ -4,8 +4,7 @@ import { randomSeedName } from '@/ui/session/randomSeedName.ts'
 
 /**
  * What a first launch opens on: a generated drift, like the generate button
- * makes. One name, one drift — typing the name shown brings this back, which
- * a fixed default rack under a random name would not.
+ * makes, so it is a real drift with a real baseline like any other.
  */
 export function firstSession(): Session {
   const name = randomSeedName()
