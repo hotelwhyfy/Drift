@@ -108,9 +108,15 @@ body {
 .bar-count { min-width: 4.5em; }
 
 /* ── Visualiser ─────────────────────────────────────────────────────────── */
+/*
+ * 96px, growing into whatever height a short page leaves. The basis must be
+ * definite: a canvas's own size is its backing store, which follows the
+ * element, so with an `auto` basis it would keep the largest height it ever
+ * grew to now that the page, not the column, scrolls.
+ */
 .viz {
   width: 100%;
-  flex: 1 1 auto;
+  flex: 1 0 96px;
   min-height: 96px;
   display: block;
 }
