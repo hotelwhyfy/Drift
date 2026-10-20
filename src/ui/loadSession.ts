@@ -1,6 +1,6 @@
 import type { Session } from '@/ui/types.ts'
 import { readProject } from '@/project/project.ts'
-import { blankSession } from '@/ui/blankSession.ts'
+import { firstSession } from '@/ui/firstSession.ts'
 import { defaultSlots } from '@/ui/defaultSlots.ts'
 
 export const SESSION_STORAGE_KEY = 'drift.state.v1'
@@ -30,5 +30,5 @@ export function loadSession(): Session {
   } catch {
     // A corrupt, blocked or older store is not a reason to fail to start.
   }
-  return blankSession()
+  return firstSession()
 }

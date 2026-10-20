@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { SeedField } from '@/ui/SeedField.tsx'
+import { DriftName } from '@/ui/DriftName.tsx'
 import { Visualizer } from '@/ui/Visualizer.tsx'
 import { Dials } from '@/ui/Dials.tsx'
 import { FileActions } from '@/ui/FileActions.tsx'
@@ -145,20 +145,6 @@ export function App() {
     }
   }, [player])
 
-  /**
-   * Set the seed to whatever was typed. Re-seeding is in place, so the current
-   * bar and the reverb tail carry across — typing a seed is a change of
-   * direction, not a restart.
-   */
-  const applySeed = useCallback((name: string) => {
-    setSeedName(name)
-    player.reseed(deriveSeed(name))
-  }, [player])
-
-  const reseed = useCallback(() => {
-    applySeed(randomSeedName())
-  }, [applySeed])
-
   /** Replaces everything at once: what opening a file, generating and undoing share. */
   const applySession = useCallback((next: Session) => {
     history.beforeReplace()
@@ -176,16 +162,18 @@ export function App() {
   }, [player, history.beforeReplace])
 
   /**
-   * A brand-new drift: new seed, dials, rack and song. It replaces the work on
-   * screen, which the autosave would then overwrite, so the notice offers it
-   * back rather than asking first — a confirmation on every press would make
-   * generating several in a row a chore.
+   * The drift a name gives: its seed, dials, rack and song. It replaces the
+   * work on screen, which the autosave would then overwrite, so the notice
+   * offers it back rather than asking first — a confirmation on every press
+   * would make generating several in a row a chore.
    */
-  const generate = useCallback(() => {
-    const name = randomSeedName()
+  const generateFrom = useCallback((name: string) => {
     applySession({ ...generateDrift(name), seedName: name, projectName: name })
     say(`generated ${name}`, session)
   }, [session, applySession, say])
+
+  /** A brand-new drift under a random name. */
+  const generate = useCallback(() => generateFrom(randomSeedName()), [generateFrom])
 
   const undoGenerate = useCallback(() => {
     const previous = notice?.undo
@@ -208,12 +196,14 @@ export function App() {
   return (
     <main className="app">
       <header className={`head ${compact ? 'compact' : ''}`} ref={headRef}>
-        <h1>
-          drift
-          {projectName && projectName !== 'untitled' && (
-            <span className="head-project">{projectName}</span>
+        <div className="head-title">
+          <h1>drift</h1>
+          <DriftName value={seedName} onCommit={generateFrom} />
+          {/* Saved or opened under a name of its own: show that too. */}
+          {projectName !== seedName && projectName !== 'untitled' && (
+            <span className="head-file">{projectName}</span>
           )}
-        </h1>
+        </div>
         <div className="state">
           <span className="mode">{NOTE_NAMES[harmonyNow.root % 12]} {harmonyNow.mode}</span>
           <span className="dot" />
@@ -302,8 +292,6 @@ export function App() {
           <span className="play-glyph">{playing ? '■' : '▶'}</span>
           <span>{playing ? 'stop' : cursor > 0 ? `from ${Math.floor(cursor) + 1}` : 'begin'}</span>
         </button>
-
-        <SeedField value={seedName} onCommit={applySeed} onShuffle={reseed} />
 
         <CaptureControls
           length={captureLength}

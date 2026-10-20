@@ -133,6 +133,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Each item stays on one line; on a narrow screen the drift name gives way. */
+.state > span { white-space: nowrap; }
 .state .mode { color: var(--accent); transition: color 600ms ease; }
 .state .dot { width: 2px; height: 2px; border-radius: 50%; background: currentColor; opacity: 0.5; }
 .bar-count { min-width: 4.5em; }
@@ -292,97 +294,6 @@ button { font: inherit; }
   color: var(--ink);
 }
 
-.seed {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  /* Sized to its content rather than stretching. The field is as wide as the
-     seed it shows (see .seed-fit), so the shuffle stays beside the text
-     rather than drifting off towards the capture controls. */
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: 3px 0 3px 6px;
-}
-
-.seed-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-
-/* The input and a hidden copy of its text in one grid cell: the copy sets the
-   width, so the field grows with the seed, up to a cap where it ellipsizes. */
-.seed-fit { display: grid; max-width: 16em; min-width: 0; }
-
-.seed-mirror,
-.seed-input {
-  grid-area: 1 / 1;
-  font: inherit;
-  font-size: 12px;
-  padding: 3px 4px 3px 2px;
-}
-
-.seed-mirror {
-  visibility: hidden;
-  white-space: pre;
-  overflow: hidden;
-  min-width: 4em;
-}
-
-.seed-input {
-  /* Zero, then stretched: an input's default width (about 20 characters)
-     would otherwise count towards the column and keep it from shrinking. */
-  width: 0;
-  min-width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  color: var(--ink-dim);
-  outline: none;
-  text-overflow: ellipsis;
-}
-
-.seed-input:hover { border-bottom-color: #ffffff14; }
-
-.seed-input:focus {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
-}
-
-/* Sized and surfaced like the capture button, its neighbour across the row. */
-.seed-shuffle {
-  appearance: none;
-  border: none;
-  background: #ffffff0a;
-  color: var(--ink-dim);
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 8px;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  flex: none;
-  transition: background 160ms ease;
-}
-
-.seed-shuffle:hover { color: var(--ink); background: #ffffff14; }
-.seed-shuffle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-.seed-shuffle svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.seed-hint {
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  color: var(--ink-faint);
-  opacity: 0.62;
-  padding-left: 2px;
-}
-
 .capture { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 
 .lengths { display: flex; background: #ffffff08; border-radius: 999px; padding: 2px; }
@@ -452,7 +363,9 @@ button { font: inherit; }
 @media (max-width: 620px) {
   .dials { grid-template-columns: repeat(3, 1fr); gap: 10px 4px; }
   .transport { flex-wrap: wrap; }
-  .seed { order: 3; flex-basis: 100%; }
+  /* The drift name is a control now; rather than squeeze it to nothing, the
+     status drops to its own line under it. */
+  .head { flex-wrap: wrap; row-gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -890,17 +803,54 @@ input[type="range"]::-webkit-slider-thumb {
 
 
 /* ── File actions ───────────────────────────────────────────────────────── */
-.head h1 { display: flex; align-items: baseline; gap: 10px; }
+.head-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 
-.head-project {
-  letter-spacing: 0;
-  text-transform: none;
+/*
+ * The drift's name, editable in place. The input and a hidden copy of its
+ * text share one grid cell: the copy sets the width, so the field is as wide
+ * as the name, up to a cap where it ellipsizes.
+ */
+.drift-name { display: grid; max-width: 14em; min-width: 0; }
+
+.drift-name-mirror,
+.drift-name-input {
+  grid-area: 1 / 1;
+  font: inherit;
   font-size: 13px;
+  letter-spacing: 0;
+  padding: 1px 4px 1px 0;
+}
+
+.drift-name-mirror {
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+  min-width: 3em;
+}
+
+.drift-name-input {
+  /* Zero, then stretched: an input's default width (about 20 characters)
+     would otherwise count towards the column and keep it from shrinking. */
+  width: 0;
+  min-width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
   color: var(--ink);
-  max-width: 14em;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.drift-name-input:hover { border-bottom-color: #ffffff14; }
+.drift-name-input:focus { border-bottom-color: var(--accent); }
+
+.head-file {
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
 }
 
 .file-actions { display: flex; gap: 1px; margin-left: 5px; }
