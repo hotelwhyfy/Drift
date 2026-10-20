@@ -1,10 +1,15 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useCanvasLoop } from '@/ui/hooks/useCanvasLoop.ts'
 import type { Player } from '@/audio/player.ts'
 
 /** The band the music lives in; everything outside it is dead space. */
 const LOW_HZ = 45
 const HIGH_HZ = 11000
+
+/** How far content must slide over the picture before it is fully dimmed. */
+const DIM_RAMP_PX = 64
+/** Opacity once content covers it. */
+const DIMMED = 0
 
 interface Props {
   player: Player | null
@@ -102,6 +107,27 @@ export function Visualizer({ player, playing, accent }: Props) {
       ctx.stroke()
     }
   }, [player, playing, accent])
+
+  // It stays put while the page scrolls over it; fade it as content arrives,
+  // so the picture never competes with the controls lying on top of it.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const update = (): void => {
+      const next = canvas.nextElementSibling
+      if (!next) return
+      const overlap = canvas.getBoundingClientRect().bottom - next.getBoundingClientRect().top
+      const dim = Math.min(1, Math.max(0, overlap / DIM_RAMP_PX))
+      canvas.style.opacity = String(1 - (1 - DIMMED) * dim)
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [canvasRef])
 
   return <canvas className="viz" ref={canvasRef} aria-hidden="true" />
 }

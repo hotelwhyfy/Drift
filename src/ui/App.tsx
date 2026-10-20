@@ -33,6 +33,8 @@ import { useFileDrop } from '@/ui/hooks/useFileDrop.ts'
 import { useShortcuts } from '@/ui/hooks/useShortcuts.ts'
 import { usePlayer } from '@/ui/hooks/usePlayer.ts'
 import { useAccent } from '@/ui/hooks/useAccent.ts'
+import { useHeightAsCssVar } from '@/ui/hooks/useHeightAsCssVar.ts'
+import { useScrolledPast } from '@/ui/hooks/useScrolledPast.ts'
 import { usePlayerSync } from '@/ui/hooks/usePlayerSync.ts'
 
 export function App() {
@@ -69,6 +71,11 @@ export function App() {
 
   // A song that stopped by itself goes back to the top, ready to play again.
   const lastSnapshot = useRef<EngineSnapshot | null>(null)
+  // The header is pinned; the visualiser pins below it via --head-h.
+  const headRef = useRef<HTMLElement>(null)
+  useHeightAsCssVar(headRef, '--head-h')
+  // Shorter once scrolled, for more room; it shrinks 16px, inside the 40/8 gap.
+  const compact = useScrolledPast(40, 8)
   lastSnapshot.current = snapshot
   useEffect(() => {
     if (playing) return
@@ -200,7 +207,7 @@ export function App() {
 
   return (
     <main className="app">
-      <header className="head">
+      <header className={`head ${compact ? 'compact' : ''}`} ref={headRef}>
         <h1>
           drift
           {projectName && projectName !== 'untitled' && (
