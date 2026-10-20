@@ -40,6 +40,11 @@ function levelLane(): SongLane {
   }
 }
 
+/** A level lane just added to the timeline, nothing drawn in it yet. */
+function emptyLevelLane(): SongLane {
+  return { ...makeLane('lvl', { kind: 'level' }), source: { kind: 'song', envelope: { points: [] } } }
+}
+
 describe('RackView rows', () => {
   it('shows one row per slot and skips an instrument it does not know', () => {
     const slots = [...defaultSlots(), { ...defaultSlots()[0], id: 'ghost-9', defId: 'no-such-instrument', name: 'Ghost' }]
@@ -114,6 +119,17 @@ describe('RackView level fader', () => {
     expect(lane.source.kind).toBe('song')
     if (lane.source.kind !== 'song') return
     expect(lane.source.envelope.points.some((p) => p.bar === 2)).toBe(true)
+  })
+
+  it('is left alone by a timeline lane with nothing drawn in it', () => {
+    const slots = defaultSlots()
+    slots[0] = { ...slots[0], lanes: [emptyLevelLane()] }
+    const { onChange, rows } = setup({ slots })
+    expect(rows()[0].querySelector('.slot-level-dot')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Pad level'), { target: { value: '0.3' } })
+    const next = onChange.mock.lastCall![0][0]
+    expect(next.level).toBe(0.3)
+    expect(next.lanes[0]).toEqual(slots[0].lanes[0])
   })
 
   it('marks an automated level and ghosts where the engine actually has it', () => {
@@ -269,6 +285,17 @@ describe('rack helpers', () => {
     expect(half.brightness).toBeCloseTo(0.6, 10)
     expect(half.motion).toBeCloseTo(0.4, 10)
     expect(own.brightness).toBe(0.2)
+  })
+
+  it('has the engine ignore an empty timeline lane and follow one with a point', () => {
+    const level = (lane: SongLane): number => {
+      const rack = new Rack(24000, 7)
+      rack.sync([{ ...defaultSlots()[0], level: 0.8, lanes: [lane] }])
+      rack.control(NEUTRAL, { bars: 0, kick: 0, level: 0 })
+      return rack.readout()[0].level
+    }
+    expect(level(emptyLevelLane())).toBe(0.8)
+    expect(level(levelLane())).toBe(0.5)
   })
 
   it('has the engine resolve a slot the same way the pad shows it', () => {

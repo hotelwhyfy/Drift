@@ -10,7 +10,10 @@ import type { Breakpoint } from '@/song/types.ts'
 
 const lanes = new LaneEvaluator()
 
-function songLane(id: string, points: Breakpoint[] = [], patch: Partial<Lane> = {}): Lane {
+/** One point by default: an empty timeline lane drives nothing. */
+const ONE_POINT: Breakpoint[] = [{ bar: 0, value: 0.5, shape: 'linear' }]
+
+function songLane(id: string, points: Breakpoint[] = ONE_POINT, patch: Partial<Lane> = {}): Lane {
   return { ...makeLane(id, { kind: 'level' }), source: { kind: 'song', envelope: { points } }, ...patch }
 }
 
@@ -47,11 +50,12 @@ describe('invertLane', () => {
 })
 
 describe('songLaneFor', () => {
-  it('only lets an enabled timeline lane with depth drive a control', () => {
+  it('only lets an enabled timeline lane with depth and a point drive a control', () => {
     const loop = makeLane('loop', { kind: 'level' })
-    const off = songLane('off', [], { enabled: false })
-    const flat = songLane('flat', [], { depth: 0 })
-    expect(songLaneFor([loop, off, flat], () => true)).toBeUndefined()
+    const off = songLane('off', ONE_POINT, { enabled: false })
+    const flat = songLane('flat', ONE_POINT, { depth: 0 })
+    const empty = songLane('empty', [])
+    expect(songLaneFor([loop, off, flat, empty], () => true)).toBeUndefined()
   })
 
   it('picks the last match, the lane with the final say', () => {
@@ -60,7 +64,7 @@ describe('songLaneFor', () => {
   })
 
   it('matches on the target', () => {
-    const param = songLane('p', [], { target: { kind: 'param', param: 'tone' } })
+    const param = songLane('p', ONE_POINT, { target: { kind: 'param', param: 'tone' } })
     expect(songLaneFor([param], (t) => t.kind === 'level')).toBeUndefined()
     expect(songLaneFor([param], (t) => t.kind === 'param' && t.param === 'tone')?.id).toBe('p')
   })
@@ -70,7 +74,7 @@ describe('recordInto', () => {
   it('writes at the playhead, snapped to a quarter bar', () => {
     const lane = songLane('a')
     const [next] = recordInto([lane], driver(lane), 0.8, 0.3, 4.13)
-    expect(next.source.kind === 'song' && next.source.envelope.points).toEqual([{ bar: 4.25, value: 0.3, shape: 'linear' }])
+    expect(next.source.kind === 'song' && next.source.envelope.points).toEqual([...ONE_POINT, { bar: 4.25, value: 0.3, shape: 'linear' }])
   })
 
   it('moves a point already there rather than adding another', () => {
@@ -81,7 +85,7 @@ describe('recordInto', () => {
 
   it('leaves the other lanes, and the lane’s own mode and depth, alone', () => {
     const other = makeLane('loop', { kind: 'level' })
-    const lane = songLane('a', [], { mode: 'add', depth: 0.5 })
+    const lane = songLane('a', ONE_POINT, { mode: 'add', depth: 0.5 })
     const next = recordInto([other, lane], driver(lane), 0.4, 0.6, 1)
     expect(next[0]).toBe(other)
     expect(next[1].mode).toBe('add')
@@ -89,7 +93,7 @@ describe('recordInto', () => {
   })
 
   it('records a value the lane then plays back', () => {
-    const lane = songLane('a', [], { mode: 'set', depth: 0.5 })
+    const lane = songLane('a', ONE_POINT, { mode: 'set', depth: 0.5 })
     const [next] = recordInto([lane], driver(lane), 0.4, 0.55, 3)
     expect(drivenValue(driver(next), 0.4, 3)).toBeCloseTo(0.55, 9)
   })

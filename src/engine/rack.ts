@@ -4,6 +4,7 @@ import { FuzzyEngine } from '@/fuzzy/inference.ts'
 import type { Expression } from '@/fuzzy/expression.ts'
 import { NEUTRAL, blendExpression, clampExpression } from '@/fuzzy/expression.ts'
 import { LaneEvaluator } from '@/automation/lane.ts'
+import { laneActs } from '@/automation/laneActs.ts'
 import type { LaneContext } from '@/automation/lane.ts'
 import { Resolver } from '@/harmony/resolver.ts'
 import type { HarmonicContext, Role } from '@/harmony/types.ts'
@@ -270,7 +271,7 @@ export class Rack {
     const base = blendExpression(slot.expression, global, slot.follow)
     // Automation lands on top, so a drawn curve overrides both.
     slot.lanes.forEach((lane) => {
-      if (!lane.enabled || lane.target.kind !== 'expression') return
+      if (!laneActs(lane) || lane.target.kind !== 'expression') return
       const v = this.lanes.value(lane, ctx)
       const key = lane.target.key
       base[key] = this.lanes.apply(base[key], v, lane)
@@ -292,7 +293,7 @@ export class Rack {
     // Parameter lanes move a parameter relative to wherever the rules or the
     // knob left it.
     slot.lanes.forEach((lane) => {
-      if (!lane.enabled || lane.target.kind !== 'param') return
+      if (!laneActs(lane) || lane.target.kind !== 'param') return
       const name = lane.target.param
       const spec = paramSpecOf(slot.def, name)
       if (!spec || params[name] === undefined) return
@@ -301,7 +302,7 @@ export class Rack {
     })
 
     const level = slot.lanes
-      .filter((lane) => lane.enabled && lane.target.kind === 'level')
+      .filter((lane) => laneActs(lane) && lane.target.kind === 'level')
       .reduce((current, lane) => clamp01(this.lanes.apply(current, this.lanes.value(lane, ctx), lane)), slot.level)
     return { resolved, params, level }
   }

@@ -1,5 +1,6 @@
 import type { SlotDesc } from '@/engine/types.ts'
 import type { SongLane } from '@/automation/songLaneFor.ts'
+import { laneActs } from '@/automation/laneActs.ts'
 import type { BarScale } from '@/ui/barScale.ts'
 import { EnvelopeLane } from '@/ui/EnvelopeLane.tsx'
 import { laneColour } from '@/ui/laneColour.ts'
@@ -20,7 +21,7 @@ interface Props {
 
 /** One instrument lane drawn on the timeline: a switch, a remove button, and its envelope. */
 export function SongLaneRow({ slot, lane, scale, width, lengthBars, playhead, accent, onLaneChange }: Props) {
-  const driving = lane.enabled && lane.source.envelope.points.length > 0
+  const driving = laneActs(lane)
   return (
     <div className="tl-row">
       <div className="tl-label">
