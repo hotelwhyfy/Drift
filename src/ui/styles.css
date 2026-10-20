@@ -294,29 +294,46 @@ button { font: inherit; }
 
 .seed {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  /* Sized to its content rather than stretching: a growing input pushes the
-     shuffle button away from the text it belongs to and parks it next to the
-     capture controls, which is where it looks like it belongs to those. */
+  align-items: center;
+  gap: 8px;
+  /* Sized to its content rather than stretching. The field is as wide as the
+     seed it shows (see .seed-fit), so the shuffle stays beside the text
+     rather than drifting off towards the capture controls. */
   flex: 0 1 auto;
   min-width: 0;
   padding: 3px 0 3px 6px;
 }
 
-.seed-row { display: flex; align-items: center; gap: 2px; }
+.seed-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+/* The input and a hidden copy of its text in one grid cell: the copy sets the
+   width, so the field grows with the seed, up to a cap where it ellipsizes. */
+.seed-fit { display: grid; max-width: 16em; min-width: 0; }
+
+.seed-mirror,
+.seed-input {
+  grid-area: 1 / 1;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 4px 3px 2px;
+}
+
+.seed-mirror {
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+  min-width: 4em;
+}
 
 .seed-input {
-  width: 13em;
-  max-width: 100%;
-  min-width: 0;
+  /* Zero, then stretched: an input's default width (about 20 characters)
+     would otherwise count towards the column and keep it from shrinking. */
+  width: 0;
+  min-width: 100%;
   background: transparent;
   border: none;
   border-bottom: 1px solid transparent;
   color: var(--ink-dim);
-  font: inherit;
-  font-size: 12px;
-  padding: 3px 2px;
   outline: none;
   text-overflow: ellipsis;
 }
@@ -328,25 +345,29 @@ button { font: inherit; }
   border-bottom-color: var(--accent);
 }
 
+/* Sized and surfaced like the capture button, its neighbour across the row. */
 .seed-shuffle {
   appearance: none;
   border: none;
-  background: none;
-  color: var(--ink-faint);
-  padding: 3px;
-  border-radius: 4px;
+  background: #ffffff0a;
+  color: var(--ink-dim);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
   cursor: pointer;
   display: grid;
   place-items: center;
   flex: none;
+  transition: background 160ms ease;
 }
 
-.seed-shuffle:hover { color: var(--ink); background: #ffffff0c; }
+.seed-shuffle:hover { color: var(--ink); background: #ffffff14; }
 .seed-shuffle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .seed-shuffle svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.4;

@@ -38,48 +38,53 @@ export function SeedField({ value, onCommit, onShuffle }: Props) {
 
   return (
     <div className="seed">
-      <div className="seed-row">
-        <Tooltip content="Any text. The same seed and dials always give the same music.">
-          <input
-            ref={inputRef}
-            type="text"
-            className="seed-input"
-            value={draft}
-            maxLength={MAX_SEED}
-            spellCheck={false}
-            autoComplete="off"
-            aria-label="Seed"
-            onChange={(e) => setDraft(e.target.value)}
-            onFocus={(e) => e.currentTarget.select()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                commit()
-                inputRef.current?.blur()
-              } else if (e.key === 'Escape') {
-                setDraft(value)
-                inputRef.current?.blur()
-              }
-              // Space would otherwise reach the global play/pause shortcut.
-              e.stopPropagation()
-            }}
-            onBlur={commit}
-          />
-        </Tooltip>
-        <Tooltip content="Somewhere else entirely">
-          <button
-            type="button"
-            className="seed-shuffle"
-            onClick={onShuffle}
-            aria-label="Random seed"
-          >
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M2 4.2h2.6l6.8 7.6H14M2 11.8h2.6l2.1-2.3M9.3 6.1l2.1-1.9H14" />
-              <path d="M12.2 2.6 14 4.2l-1.8 1.6M12.2 10.2 14 11.8l-1.8 1.6" />
-            </svg>
-          </button>
-        </Tooltip>
+      <div className="seed-text">
+        {/* The input and an invisible copy of its text share one grid cell,
+            so the field is as wide as the seed and the shuffle sits beside it. */}
+        <span className="seed-fit">
+          <span className="seed-mirror" aria-hidden="true">{draft || ' '}</span>
+          <Tooltip content="Any text. The same seed and dials always give the same music.">
+            <input
+              ref={inputRef}
+              type="text"
+              className="seed-input"
+              value={draft}
+              maxLength={MAX_SEED}
+              spellCheck={false}
+              autoComplete="off"
+              aria-label="Seed"
+              onChange={(e) => setDraft(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  commit()
+                  inputRef.current?.blur()
+                } else if (e.key === 'Escape') {
+                  setDraft(value)
+                  inputRef.current?.blur()
+                }
+                // Space would otherwise reach the global play/pause shortcut.
+                e.stopPropagation()
+              }}
+              onBlur={commit}
+            />
+          </Tooltip>
+        </span>
+        <span className="seed-hint">seed</span>
       </div>
-      <span className="seed-hint">seed</span>
+      <Tooltip content="Somewhere else entirely">
+        <button
+          type="button"
+          className="seed-shuffle"
+          onClick={onShuffle}
+          aria-label="Random seed"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2 4.2h2.6l6.8 7.6H14M2 11.8h2.6l2.1-2.3M9.3 6.1l2.1-1.9H14" />
+            <path d="M12.2 2.6 14 4.2l-1.8 1.6M12.2 10.2 14 11.8l-1.8 1.6" />
+          </svg>
+        </button>
+      </Tooltip>
     </div>
   )
 }
