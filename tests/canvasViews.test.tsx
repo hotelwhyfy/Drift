@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
 import { Visualizer } from '@/ui/Visualizer.tsx'
-import { Listening } from '@/ui/mood/Listening.tsx'
 import { Player } from '@/audio/player.ts'
 import { DEFAULT_MACROS } from '@/macros/macros.ts'
 
@@ -83,29 +82,5 @@ describe('Visualizer', () => {
 
     frame?.()
     expect(loud.ys.length).toBeGreaterThan(first)
-  })
-})
-
-describe('Listening', () => {
-  it('is a hidden canvas that draws drifting lines in the accent colour', () => {
-    const { container } = render(<Listening player={null} playing={false} accent={ACCENT} />)
-    const canvas = container.querySelector('canvas')!
-    expect(canvas.className).toBe('listening')
-    expect(canvas.getAttribute('aria-hidden')).toBe('true')
-    expect(drawn.strokes.filter((s) => s === ACCENT)).toHaveLength(5)
-  })
-
-  it('spreads the lines further apart as the music gets louder', () => {
-    const spread = (level: number): number => {
-      drawn = recordingContext()
-      render(<Listening player={playerWithSpectrum(level)} playing accent={ACCENT} />)
-      // The frame has just been drawn once; step it so the level has begun to rise.
-      for (let i = 0; i < 60; i++) frame?.()
-      const ys = drawn.ys.slice(-400)
-      const result = Math.max(...ys) - Math.min(...ys)
-      cleanup()
-      return result
-    }
-    expect(spread(220)).toBeGreaterThan(spread(0))
   })
 })

@@ -174,9 +174,8 @@ function characterFor(rng: Rng): Expression {
 }
 
 /**
- * A slow, never-repeating walk on each instrument's motion — the same small
- * life the mood version gives every voice, which is most of what stops a long
- * drift from sounding like a loop.
+ * A slow, never-repeating walk on each instrument's motion — the small life
+ * that is most of what stops a long drift from sounding like a loop.
  *
  * On a sparse voice it scales rather than adds: the walk can only settle it
  * below where the dials put it, never push it into more notes.
