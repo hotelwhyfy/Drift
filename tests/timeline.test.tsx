@@ -131,7 +131,7 @@ describe('Timeline song settings', () => {
     const input = screen.getByLabelText('Reference pitch for A4 in hertz') as HTMLInputElement
     expect(input.placeholder).toBe('438.4')
     expect(input.value).toBe('')
-    expect(screen.getByText('Hz · auto')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'auto' }).getAttribute('aria-pressed')).toBe('true')
 
     fireEvent.change(input, { target: { value: '441.26' } })
     fireEvent.blur(input)
@@ -154,6 +154,30 @@ describe('Timeline song settings', () => {
     fireEvent.change(input, { target: { value: '' } })
     fireEvent.blur(input)
     expect(lastSong().tuning).toBeNull()
+  })
+
+  it('shows auto from what is typed, and the auto button resets to the dials', () => {
+    const { lastSong, onSongChange } = setup({ song: { ...DEFAULT_SONG, tuning: 432 } })
+    const input = screen.getByLabelText('Reference pitch for A4 in hertz') as HTMLInputElement
+    const auto = screen.getByRole('button', { name: 'auto' })
+    expect(auto.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.change(input, { target: { value: '' } })
+    expect(auto.getAttribute('aria-pressed')).toBe('true')
+    expect(onSongChange).not.toHaveBeenCalled()
+
+    fireEvent.change(input, { target: { value: '437' } })
+    expect(auto.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(auto)
+    expect(lastSong().tuning).toBeNull()
+    expect(input.value).toBe('432')
+  })
+
+  it('turning auto off keeps the pitch the dials are giving now', () => {
+    const { lastSong } = setup({ autoTuning: 438.4 })
+    fireEvent.click(screen.getByRole('button', { name: 'auto' }))
+    expect(lastSong().tuning).toBe(438.4)
   })
 })
 

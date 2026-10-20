@@ -1,6 +1,4 @@
-import { useMemo } from 'react'
 import type { Song } from '@/song/types.ts'
-import { songSeconds } from '@/song/songSeconds.ts'
 import { withMacroTrack } from '@/song/withMacroTrack.ts'
 import { withLength } from '@/song/withLength.ts'
 import type { Macros } from '@/macros/macros.ts'
@@ -49,7 +47,6 @@ export function Timeline({
 }: Props) {
   const view = useTimelineView(playhead, playing)
   const { scale, width } = view
-  const seconds = useMemo(() => songSeconds(song, dials), [song, dials])
 
   const songLanes = slots.flatMap((slot) => slot.lanes.filter(isSongLane).map((lane) => ({ slot, lane })))
 
@@ -57,7 +54,7 @@ export function Timeline({
     <section className="timeline" aria-label="Song timeline">
       <div className="tl-head">
         <span className="tl-title">song</span>
-        <SongSettings song={song} seconds={seconds} autoTuning={autoTuning} onSongChange={onSongChange} />
+        <SongSettings song={song} dials={dials} autoTuning={autoTuning} onSongChange={onSongChange} />
         <TimelineZoom
           follow={view.follow}
           onZoomIn={view.zoomIn}

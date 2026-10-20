@@ -768,17 +768,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .lane-bars { display: inline-flex; align-items: center; gap: 3px; }
 
-.lane-bars input {
-  width: 46px;
-  background: #ffffff08;
-  border: none;
-  color: var(--ink-dim);
-  font: inherit;
-  font-size: 10.5px;
-  padding: 3px 5px;
-  border-radius: 5px;
-  font-variant-numeric: tabular-nums;
-}
+.lane-bars input { width: 34px; }
 
 .lane-bars-unit { font-size: 10px; color: var(--ink-faint); margin-right: 2px; }
 .lane-head .lane-bars button { width: auto; min-width: 20px; padding: 0 4px; }
@@ -1047,17 +1037,70 @@ input[type="range"]::-webkit-slider-thumb {
 
 .tl-length { display: inline-flex; align-items: center; gap: 5px; }
 
-.tl-length input {
-  width: 56px;
+.tl-length input { width: 44px; }
+
+/* ── Number field ───────────────────────────────────────────────────────── */
+/* The browser's spin buttons are hidden; the steppers sit inside the same pill. */
+.num {
+  display: inline-flex;
+  align-items: stretch;
   background: #ffffff08;
+  border-radius: 5px;
+  transition: background 120ms ease;
+}
+
+.num:hover { background: #ffffff0d; }
+.num:focus-within { box-shadow: 0 0 0 1px var(--accent); }
+
+.num input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  background: none;
   border: none;
+  outline: none;
   color: var(--ink-dim);
   font: inherit;
   font-size: 10.5px;
-  padding: 3px 5px;
-  border-radius: 5px;
+  padding: 3px 0 3px 5px;
   font-variant-numeric: tabular-nums;
-  user-select: text;
+}
+
+.num input:focus { color: var(--ink); }
+.num input::placeholder { color: var(--ink-faint); }
+.num input::-webkit-inner-spin-button,
+.num input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.num-steps { display: flex; flex-direction: column; padding: 2px 2px 2px 0; }
+
+/* Doubled class: the lane header styles every button in it, and these sit there. */
+.num .num-steps button {
+  appearance: none;
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.num .num-steps button:hover { background: #ffffff10; color: var(--ink-dim); }
+.num .num-steps button:active { color: var(--accent); }
+
+.num-steps svg {
+  width: 7px;
+  height: 4px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .tl-btn, .tl-seg button {

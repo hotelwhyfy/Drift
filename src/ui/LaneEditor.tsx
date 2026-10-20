@@ -8,6 +8,7 @@ import type { InstrumentDef } from '@/instruments/types.ts'
 import { controlsOf } from '@/instruments/controlsOf.ts'
 import { released } from '@/ui/released.ts'
 import { Select } from '@/ui/Select.tsx'
+import { NumberField } from '@/ui/NumberField.tsx'
 import type { SelectOption } from '@/ui/types.ts'
 import { canvasScale } from '@/ui/canvasScale.ts'
 
@@ -249,14 +250,7 @@ function BarsField({ bars, onChange }: { bars: number; onChange: (bars: number) 
   })
   return (
     <span className="lane-bars">
-      <input
-        type="number"
-        min={0.25}
-        max={MAX_BARS}
-        step={1}
-        {...field}
-        aria-label="Loop length in bars"
-      />
+      <NumberField field={field} min={0.25} max={MAX_BARS} aria-label="Loop length in bars" />
       <span className="lane-bars-unit">bars</span>
       {BARS.map((b) => (
         <button key={b} type="button" className={bars === b ? 'on' : ''} onClick={() => onChange(b)}>{b}</button>

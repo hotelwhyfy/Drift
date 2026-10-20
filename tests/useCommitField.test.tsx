@@ -6,7 +6,7 @@ import { useCommitField } from '@/ui/hooks/useCommitField.ts'
 afterEach(cleanup)
 
 function Field({ shown, commit }: { shown: string, commit: (text: string) => void }) {
-  return <input aria-label="field" {...useCommitField(shown, commit)} />
+  return <input aria-label="field" {...useCommitField(shown, commit).input} />
 }
 
 function setup(shown = '5') {
