@@ -889,6 +889,10 @@ input[type="range"]::-webkit-slider-thumb {
   animation: toast-in 180ms ease-out;
 }
 
+/* Duration matches TOAST_EXIT_MS in useNotice.ts, which removes it afterwards. */
+.toast.leaving { animation: toast-out 160ms ease-in forwards; }
+.toast.leaving .toast-action { pointer-events: none; }
+
 .toast-action {
   appearance: none;
   border: none;
@@ -909,8 +913,12 @@ input[type="range"]::-webkit-slider-thumb {
   from { opacity: 0; transform: translate(-50%, 6px); }
 }
 
+@keyframes toast-out {
+  to { opacity: 0; transform: translate(-50%, 4px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .toast { animation: none; }
+  .toast, .toast.leaving { animation: none; }
 }
 
 /*

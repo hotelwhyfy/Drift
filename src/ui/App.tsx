@@ -309,7 +309,7 @@ export function App() {
       {/* Floats over the page rather than taking a row in it, so a
           confirmation never shifts the controls under the pointer. */}
       {notice && (
-        <div className="toast" role="status">
+        <div key={notice.id} className={`toast ${notice.leaving ? 'leaving' : ''}`} role="status">
           {notice.text}
           {notice.undo && <button type="button" className="toast-action" onClick={undoGenerate}>undo</button>}
         </div>
