@@ -36,17 +36,31 @@ input[type="text"], input:not([type]), textarea, [contenteditable] {
 
 html, body, #root { height: 100%; }
 
+/*
+ * The page scrolls, not the column: the bar sits at the viewport's edge and a
+ * wheel over the margins still moves it. Styled like the timeline's bar. The
+ * standard properties are for Firefox only — in Chrome, setting them switches
+ * off the ::-webkit-scrollbar styling that every other scroller here uses.
+ * The gutter is reserved so opening a slot doesn't shift the layout sideways.
+ */
+html { scrollbar-gutter: stable; }
+html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar-thumb { background: #ffffff18; border-radius: 3px; }
+@supports not selector(::-webkit-scrollbar) {
+  html { scrollbar-width: thin; scrollbar-color: #ffffff18 transparent; }
+}
+
 body {
   margin: 0;
   background:
-    radial-gradient(120% 80% at 50% 0%, #17141d 0%, var(--bg) 62%);
+    var(--bg) radial-gradient(120% 80% at 50% 0%, #17141d 0%, var(--bg) 62%) no-repeat;
   color: var(--ink);
   font: 400 14px/1.5 ui-sans-serif, -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .app {
-  height: 100%;
+  min-height: 100dvh;
   max-width: 820px;
   margin: 0 auto;
   padding: 28px 20px calc(24px + env(safe-area-inset-bottom, 0px));
@@ -383,8 +397,6 @@ button { font: inherit; }
 }
 
 /* ── Rack ───────────────────────────────────────────────────────────────── */
-.app { overflow-y: auto; }
-
 .rack {
   display: flex;
   flex-direction: column;

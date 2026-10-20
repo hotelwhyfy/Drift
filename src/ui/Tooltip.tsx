@@ -106,8 +106,8 @@ export function Tooltip({ content, placement = 'top', children }: Props) {
   useLayoutEffect(() => {
     if (!open) return
     place()
-    // The rack scrolls inside .app, not the window: listen in the capture
-    // phase so any scrolling ancestor moves the tooltip with its anchor.
+    // Listen in the capture phase so the page or any scrolling ancestor
+    // moves the tooltip with its anchor.
     window.addEventListener('scroll', place, true)
     window.addEventListener('resize', place)
     return () => {

@@ -36,8 +36,8 @@ export function usePopupPosition(open: boolean, onDismiss: () => void): PopupAnc
   useLayoutEffect(() => {
     if (!open) return
     place()
-    // Panels scroll inside .app rather than the window, so listen in the
-    // capture phase — but not to the list's own scrolling.
+    // The page or any scrolling ancestor may move the trigger, so listen in
+    // the capture phase — but not to the list's own scrolling.
     const onScroll = (e: Event): void => { if (e.target !== listRef.current) place() }
     window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', onDismiss)
